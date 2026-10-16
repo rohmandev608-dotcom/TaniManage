@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Dashboard Admin — TaniManage</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <main class="page">
+      <a class="brand" href="/">🌱 TaniManage</a>
+      <h1>Dashboard Admin / Penyuluh</h1>
+      <p>Selamat datang, {{name}}. Area ini khusus untuk pengelolaan akun dan laporan agregat wilayah.</p>
+      <section class="panel">
+        <h2>Manajemen pengguna</h2>
+        <div id="user-list" aria-live="polite">Memuat daftar pengguna…</div>
+        <form method="post" action="/admin/users/role">
+          <input type="hidden" name="_csrf" value="{{csrfToken}}">
+          <label>ID pengguna
+            <input type="number" name="userId" min="1" required>
+          </label>
+          <label>Peran baru
+            <select name="role">
+              <option value="farmer">Petani / Pemilik Lahan</option>
+              <option value="worker">Pekerja Tani</option>
+              <option value="admin">Admin / Penyuluh</option>
+            </select>
+          </label>
+          <button type="submit">Simpan peran</button>
+        </form>
+      </section>
+      <form method="post" action="/logout">
+        <input type="hidden" name="_csrf" value="{{csrfToken}}">
+        <button type="submit">Keluar</button>
+      </form>
+    </main>
+    <script>
+      fetch('/api/admin/users')
+        .then((response) => {
+          if (!response.ok) throw new Error('Daftar pengguna tidak dapat dimuat.');
+          return response.json();
+        })
+        .then(({ users }) => {
+          const list = document.createElement('ul');
+          for (const user of users) {
+            const item = document.createElement('li');
+            item.textContent = `${user.id} — ${user.name} (${user.email}) — ${user.role}`;
+            list.append(item);
+          }
+          const container = document.querySelector('#user-list');
+          container.replaceChildren(list);
+        })
+        .catch((error) => {
+          document.querySelector('#user-list').textContent = error.message;
+        });
+    </script>
+  </body>
+</html>

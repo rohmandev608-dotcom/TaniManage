@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Manajemen Pertanian (FMIS)</title>
+    <!-- Menggunakan Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased">
+
+    <!-- NAVBAR (Responsif: Desktop & Mobile) -->
+    <header class="bg-white shadow-sm sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <!-- Logo -->
+            <div class="flex items-center space-x-2">
+                <span class="text-2xl">🌱</span>
+                <span class="font-bold text-xl text-green-700">TaniManage</span>
+            </div>
+
+            <!-- Menu Desktop -->
+            <nav class="hidden md:flex space-x-8 text-sm font-medium">
+                <a href="#beranda" class="text-green-600 hover:text-green-800">Beranda</a>
+                <a href="#fitur" class="text-slate-600 hover:text-green-800">Fitur</a>
+                <a href="#tentang" class="text-slate-600 hover:text-green-800">Tentang</a>
+            </nav>
+
+            <!-- Tombol Aksi -->
+            <div class="flex items-center space-x-3">
+                <a href="/login" class="text-sm font-medium text-slate-700 hover:text-green-600 px-3 py-2">Masuk</a>
+                <a href="/register" class="text-sm font-medium bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition">Daftar</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- HERO SECTION (Responsif: 1 Kolom di Mobile, 2 Kolom di Desktop) -->
+    <section id="beranda" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-20">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+            
+            <!-- Kolom Teks -->
+            <div class="space-y-6 text-center md:text-left">
+                <span class="inline-block bg-green-100 text-green-800 text-xs font-semibold px-3 py-1 rounded-full">
+                    Solusi Modern Pertanian Indonesia
+                </span>
+                <h1 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight leading-tight">
+                    Kelola Lahan, Pantau Panen, & Catat Keuangan Lebih Mudah
+                </h1>
+                <p class="text-slate-600 text-base sm:text-lg">
+                    Platform manajemen pertanian terpadu untuk membantu petani mengontrol aktivitas harian, stok inventaris, dan profitabilitas musim tanam secara akurat.
+                </p>
+                <div class="flex flex-col sm:flex-row justify-center md:justify-start gap-4">
+                    <a href="/register" class="bg-green-600 text-white font-medium px-6 py-3 rounded-xl shadow-lg hover:bg-green-700 text-center transition">
+                        Mulai Gratis Sekarang
+                    </a>
+                    <a href="#fitur" class="bg-white border border-slate-300 text-slate-700 font-medium px-6 py-3 rounded-xl hover:bg-slate-100 text-center transition">
+                        Pelajari Fitur
+                    </a>
+                </div>
+            </div>
+
+            <!-- Kolom Ilustrasi / Preview Dashboard -->
+            <div class="bg-green-700 rounded-2xl p-4 shadow-xl text-white">
+                <div class="bg-white text-slate-800 rounded-xl p-4 space-y-4">
+                    <div class="flex justify-between items-center border-b pb-3">
+                        <span class="font-bold text-sm">📊 Ringkasan Musim Tanam</span>
+                        <span class="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded">Aktif</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3 text-sm">
+                        <div class="bg-slate-50 p-3 rounded-lg">
+                            <p class="text-xs text-slate-500">Total Lahan</p>
+                            <p class="font-bold text-lg">2.5 Hektar</p>
+                        </div>
+                        <div class="bg-slate-50 p-3 rounded-lg">
+                            <p class="text-xs text-slate-500">Estimasi Panen</p>
+                            <p class="font-bold text-lg text-green-600">30 Hari Lagi</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+</body>
+</html>

@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Manajemen Buruh — TaniManage</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+  </head>
+ <body class="bg-slate-50 text-slate-800 antialiased">
+    <div class="min-h-screen flex flex-col md:flex-row">
+        {{>sidebar}}
+        <div class="flex-1 flex flex-col md:ml-64">
+            {{>navbar}}
+    <main class="mx-auto grid max-w-6xl gap-6 px-4 py-8 lg:grid-cols-[0.8fr_1.2fr]">
+      <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <p class="text-sm font-semibold uppercase tracking-wide text-emerald-700">Undangan tim</p>
+        <h1 class="mt-2 text-2xl font-bold">Ajak buruh bergabung</h1>
+        <p class="mt-2 text-sm leading-6 text-slate-600">Buruh harus login dengan akun berperan worker lalu memindai QR ini. Kode undangan acak tidak mengekspos ID owner.</p>
+        <div id="invite-qr" class="mx-auto my-6 flex min-h-48 w-48 items-center justify-center rounded-xl border border-slate-100 bg-white p-3" aria-label="QR undangan owner"></div>
+        <p id="invite-status" class="break-all text-center text-xs text-slate-500" role="status">Memuat QR undangan…</p>
+        <div class="mt-4 rounded-xl bg-slate-50 p-4 text-center">
+          <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Kode untuk bergabung</p>
+          <code id="invite-code" class="mt-2 block break-all text-sm font-bold text-emerald-800">Memuat kode undangan…</code>
+        </div>
+      </section>
+
+      <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div class="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p class="text-sm font-semibold uppercase tracking-wide text-emerald-700">Tim kebun</p>
+            <h2 class="mt-2 text-2xl font-bold">Buruh aktif & penugasan</h2>
+          </div>
+          <span id="worker-count" class="rounded-full bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-800">0 buruh</span>
+        </div>
+        <form id="assignment-form" class="mt-6 flex flex-wrap items-end gap-3">
+          <div class="flex-1 min-w-[12rem]">
+            <label for="workerId" class="block text-sm font-semibold text-slate-700">Buruh</label>
+            <select name="workerId" id="workerId" class="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:ring focus:ring-emerald-500/10">
+              <option value="">Pilih buruh</option>
+            </select>
+          </div>
+          <div class="flex-1 min-w-[12rem]">
+            <label for="cycle" class="block text-sm font-semibold text-slate-700">Lahan / Musim tanam</label>
+            <select name="cycle" id="cycle" class="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:ring focus:ring-emerald-500/10">
+              <option value="">Pilih lahan / musim tanam</option>
+            </select>
+          </div>
+          <button type="submit" class="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-800 focus:outline-none focus:ring focus:ring-emerald-500/50">Tambahkan penugasan</button>
+        </form>
+        <p id="page-status" class="mt-3 text-sm" role="status"></p>
+        <div id="worker-list" class="mt-5 space-y-3" aria-live="polite">
+          <p class="text-sm text-slate-500">Memuat daftar buruh…</p>
+        </div>
+      </section>
+    </main>
+    <script>
+      const csrfToken = document.querySelector('input[name="_csrf"]').value;
+      const status = document.querySelector('#page-status');
+      const workerList = document.querySelector('#worker-list');
+      const workerSelect = document.querySelector('#assignment-form select[name="workerId"]');
+      const cycleSelect = document.querySelector('#assignment-form select[name="cycle"]');
+      let team = { workers: [], assignments: [], fields: [] };
+
+      async function requestJson(url, options = {}) {
+        const response = await fetch(url, options);
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'Permintaan gagal diproses.');
+        return result;
+      }
+
+      function option(label, value) {
+        const node = document.createElement('option');
+        node.textContent = label;
+        node.value = value;
+        return node;
+      }
+
+      function renderTeam() {
+        document.querySelector('#worker-count').textContent = `${team.workers.length} buruh`;
+        workerSelect.replaceChildren(option('Pilih buruh', ''));
+        cycleSelect.replaceChildren(option('Pilih lahan / musim tanam', ''));
+        for (const worker of team.workers) {
+          workerSelect.append(option(`${worker.name} (${worker.email})`, worker.id));
+        }
+        for (const field of team.fields) {
+          cycleSelect.append(option(`${field.field_name} — ${field.crop_cycle_name}`, `${field.field_id}:${field.crop_cycle_id}`));
+        }
+
+        workerList.replaceChildren();
+        if (team.workers.length === 0) {
+          const empty = document.createElement('p');
+          empty.className = 'rounded-xl bg-slate-50 p-4 text-sm text-slate-600';
+          empty.textContent = 'Belum ada buruh terhubung. Minta buruh memindai QR undangan.';
+          workerList.append(empty);
+          return;
+        }
+        for (const worker of team.workers) {
+          const card = document.createElement('article');
+          card.className = 'rounded-xl border border-slate-200 p-4';
+          const heading = document.createElement('div');
+          heading.className = 'flex items-start justify-between gap-3';
+          const identity = document.createElement('div');
+          const name = document.createElement('h3');
+          name.className = 'font-bold';
+          name.textContent = worker.name;
+          const email = document.createElement('p');
+          email.className = 'text-sm text-slate-500';
+          email.textContent = worker.email;
+          identity.append(name, email);
+          const remove = document.createElement('button');
+          remove.type = 'button';
+          remove.className = 'text-sm font-semibold text-red-700 hover:underline';
+          remove.textContent = 'Keluarkan';
+          remove.addEventListener('click', () => removeWorker(worker.id));
+          heading.append(identity, remove);
+          const assignments = document.createElement('p');
+          assignments.className = 'mt-3 text-sm text-slate-700';
+          const names = team.assignments
+            .filter((assignment) => assignment.worker_id === worker.id)
+            .map((assignment) => `${assignment.field_name} — ${assignment.crop_cycle_name}${assignment.status === 'active' ? '' : ' (selesai)'}`);
+          assignments.textContent = names.length ? `Penugasan: ${names.join(', ')}` : 'Belum memiliki penugasan lahan aktif.';
+          card.append(heading, assignments);
+          workerList.append(card);
+        }
+      }
+
+      async function loadTeam() {
+        try {
+          team = await requestJson('/api/farmer/workers');
+          renderTeam();
+          const inviteUrl = new URL(team.invite.joinUrl, location.origin).href;
+          const inviteCode = new URL(team.invite.joinUrl, location.origin).searchParams.get('invite');
+          document.querySelector('#invite-code').textContent = inviteCode || 'Kode undangan tidak tersedia.';
+          const qrTarget = document.querySelector('#invite-qr');
+          qrTarget.replaceChildren();
+          if (window.QRCode) {
+            new QRCode(qrTarget, { text: inviteUrl, width: 176, height: 176 });
+            document.querySelector('#invite-status').textContent = 'Pindai dengan akun buruh untuk bergabung.';
+          } else {
+            document.querySelector('#invite-status').textContent = 'QR gagal dimuat. Muat ulang halaman atau gunakan tautan undangan.';
+            const link = document.createElement('a');
+            link.href = inviteUrl;
+            link.textContent = 'Buka tautan undangan';
+            link.className = 'mt-2 block text-center font-semibold text-emerald-700 underline';
+            qrTarget.after(link);
+          }
+        } catch (error) {
+          status.textContent = error.message;
+          workerList.textContent = error.message;
+        }
+      }
+
+      async function removeWorker(workerId) {
+        if (!confirm('Keluarkan buruh ini? Semua penugasannya pada tim Anda akan dihapus.')) return;
+        try {
+          await requestJson(`/api/farmer/workers/${workerId}/remove`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({ _csrf: csrfToken })
+          });
+          status.textContent = 'Buruh dikeluarkan dari tim.';
+          await loadTeam();
+        } catch (error) {
+          status.textContent = error.message;
+        }
+      }
+
+      document.querySelector('#assignment-form').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const [fieldId, cropCycleId] = cycleSelect.value.split(':');
+        try {
+          const result = await requestJson('/api/farmer/workers/assign', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+              _csrf: csrfToken,
+              workerId: workerSelect.value,
+              fieldId: fieldId || '',
+              cropCycleId: cropCycleId || ''
+            })
+          });
+          status.textContent = result.message;
+          await loadTeam();
+        } catch (error) {
+          status.textContent = error.message;
+        }
+      });
+
+      loadTeam();
+    </script>
+        </div>
+    </div>
+  </body>
+</html>

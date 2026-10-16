@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Ruang Kerja Buruh — TaniManage</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  </head>
+  <body class="min-h-screen bg-slate-50 text-slate-800">
+    <header class="bg-emerald-800 text-white">
+      <div class="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
+        <a class="font-bold" href="/worker">🌱 TaniManage · Ruang Buruh</a>
+        <form method="post" action="/logout">
+          <input type="hidden" name="_csrf" value="{{csrfToken}}">
+          <button class="rounded-lg bg-emerald-700 px-3 py-2 text-sm font-semibold hover:bg-emerald-600" type="submit">Keluar</button>
+        </form>
+      </div>
+    </header>
+    <main class="mx-auto max-w-5xl space-y-6 px-4 py-7">
+      <section class="rounded-2xl bg-gradient-to-r from-emerald-800 to-teal-700 p-6 text-white shadow-sm">
+        <p class="text-sm text-emerald-100">Dashboard buruh</p>
+        <h1 class="mt-1 text-2xl font-bold">Halo, {{name}}!</h1>
+        <p class="mt-2 max-w-2xl text-sm leading-6 text-emerald-50">Lihat hanya lahan yang ditugaskan kepada Anda dan laporkan pekerjaan lapangan. Menu keuangan dan data modal owner tidak tersedia pada akun buruh.</p>
+      </section>
+
+      <section class="grid gap-6 lg:grid-cols-[0.8fr_1.2fr]">
+        <div class="space-y-6">
+          <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <h2 class="text-lg font-bold">Gabung tim owner</h2>
+            <p class="mt-1 text-sm text-slate-600">Pindai QR undangan owner atau masukkan kode/link undangan.</p>
+            <div id="reader" class="mt-4 hidden overflow-hidden rounded-xl"></div>
+            <div class="mt-4 grid gap-2 sm:grid-cols-[1fr_auto]">
+              <input id="invite-code" class="min-w-0 rounded-lg border border-slate-300 px-3 py-2 text-sm" type="text" autocomplete="off" placeholder="Kode atau tautan undangan">
+              <button id="join-button" class="rounded-lg bg-emerald-700 px-4 py-2 font-semibold text-white hover:bg-emerald-800" type="button">Gabung</button>
+            </div>
+            <button id="scan-button" class="mt-3 w-full rounded-lg border border-emerald-700 px-4 py-2 font-semibold text-emerald-800 hover:bg-emerald-50" type="button">Buka kamera untuk scan QR</button>
+            <p id="join-message" class="mt-3 text-sm" role="status"></p>
+          </article>
+          <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div class="flex items-center justify-between gap-3">
+              <h2 class="text-lg font-bold">Penugasan saya</h2>
+              <span id="assignment-count" class="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800">Memuat…</span>
+            </div>
+            <div id="assignment-list" class="mt-4 space-y-3" aria-live="polite">
+              <p class="text-sm text-slate-500">Memuat penugasan…</p>
+            </div>
+          </article>
+        </div>
+
+        <div class="space-y-6">
+          <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <h2 class="text-lg font-bold">Catat aktivitas lapangan</h2>
+            <p class="mt-1 text-sm text-slate-600">Jika memakai bahan, stok owner akan berkurang dan biaya pemakaian dicatat otomatis pada musim tanam terkait.</p>
+            <form id="activity-form" class="mt-5 grid gap-4">
+              <input type="hidden" name="_csrf" value="{{csrfToken}}">
+              <label class="grid gap-1 text-sm font-semibold">Lahan / musim tanam
+                <select name="assignmentId" required class="rounded-lg border border-slate-300 bg-white px-3 py-2 font-normal"></select>
+              </label>
+              <div class="grid gap-4 sm:grid-cols-2">
+                <label class="grid gap-1 text-sm font-semibold">Jenis pekerjaan
+                  <select name="activityType" required class="rounded-lg border border-slate-300 bg-white px-3 py-2 font-normal">
+                    <option value="">Pilih aktivitas</option>
+                    <option>Penyemprotan</option><option>Pemupukan</option><option>Penyiraman</option>
+                    <option>Penyiangan</option><option>Pengolahan Tanah</option><option>Penanaman</option>
+                    <option>Panen</option><option>Lainnya</option>
+                  </select>
+                </label>
+                <label class="grid gap-1 text-sm font-semibold">Tanggal
+                  <input name="date" type="date" required class="rounded-lg border border-slate-300 px-3 py-2 font-normal">
+                </label>
+              </div>
+              <label class="grid gap-1 text-sm font-semibold">Bahan dari gudang (opsional)
+                <select name="itemId" class="rounded-lg border border-slate-300 bg-white px-3 py-2 font-normal">
+                  <option value="">Tidak memakai bahan</option>
+                </select>
+              </label>
+              <label id="quantity-wrap" class="hidden grid gap-1 text-sm font-semibold">Jumlah pemakaian
+                <input name="quantity" type="number" min="0.001" step="0.001" placeholder="Contoh: 0.5" class="rounded-lg border border-slate-300 px-3 py-2 font-normal">
+              </label>
+              <label class="grid gap-1 text-sm font-semibold">Catatan pekerjaan (opsional)
+                <textarea name="description" maxlength="1000" rows="3" class="rounded-lg border border-slate-300 px-3 py-2 font-normal" placeholder="Contoh: dosis dan kondisi tanaman"></textarea>
+              </label>
+              <button class="rounded-lg bg-emerald-700 px-4 py-3 font-semibold text-white hover:bg-emerald-800" type="submit">Simpan laporan aktivitas</button>
+            </form>
+            <p id="activity-message" class="mt-3 text-sm" role="status"></p>
+          </article>
+
+          <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <h2 class="text-lg font-bold">Aktivitas terakhir saya</h2>
+            <div id="activity-list" class="mt-3 space-y-3" aria-live="polite">
+              <p class="text-sm text-slate-500">Memuat aktivitas…</p>
+            </div>
+          </article>
+        </div>
+      </section>
+    </main>
+    <script>
+      const csrfToken = document.querySelector('input[name="_csrf"]').value;
+      const inviteInput = document.querySelector('#invite-code');
+      const joinMessage = document.querySelector('#join-message');
+      const assignmentSelect = document.querySelector('#activity-form select[name="assignmentId"]');
+      const itemSelect = document.querySelector('#activity-form select[name="itemId"]');
+      const quantityWrap = document.querySelector('#quantity-wrap');
+      const quantityInput = document.querySelector('#activity-form input[name="quantity"]');
+      const form = document.querySelector('#activity-form');
+      let resources = { assignments: [], inventoryItems: [], activities: [] };
+      let scanner = null;
+
+      function localDate() {
+        const now = new Date();
+        return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      }
+
+      async function requestJson(url, options = {}) {
+        const response = await fetch(url, options);
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'Permintaan gagal diproses.');
+        return result;
+      }
+
+      function renderResources() {
+        assignmentSelect.replaceChildren();
+        const initial = document.createElement('option');
+        initial.value = '';
+        initial.textContent = resources.assignments.length ? 'Pilih penugasan' : 'Belum ada lahan ditugaskan';
+        assignmentSelect.append(initial);
+        for (const assignment of resources.assignments) {
+          const option = document.createElement('option');
+          option.value = assignment.assignment_id;
+          option.dataset.ownerId = assignment.owner_id;
+          option.textContent = `${assignment.field_name} · ${assignment.crop_cycle_name} (${assignment.owner_name})`;
+          assignmentSelect.append(option);
+        }
+        document.querySelector('#assignment-count').textContent = `${resources.assignments.length} aktif`;
+        const list = document.querySelector('#assignment-list');
+        list.replaceChildren();
+        if (!resources.assignments.length) {
+          const empty = document.createElement('p');
+          empty.className = 'rounded-xl bg-slate-50 p-4 text-sm text-slate-600';
+          empty.textContent = 'Belum ada lahan aktif yang ditugaskan. Minta owner menghubungkan akun dan menetapkan lahan.';
+          list.append(empty);
+        }
+        for (const assignment of resources.assignments) {
+          const card = document.createElement('div');
+          card.className = 'rounded-xl border border-slate-200 p-3';
+          const field = document.createElement('p');
+          field.className = 'font-semibold';
+          field.textContent = assignment.field_name;
+          const details = document.createElement('p');
+          details.className = 'mt-1 text-sm text-slate-600';
+          details.textContent = `${assignment.crop_cycle_name} · ${assignment.owner_name}`;
+          card.append(field, details);
+          list.append(card);
+        }
+        updateItemOptions();
+
+        const activities = document.querySelector('#activity-list');
+        activities.replaceChildren();
+        if (!resources.activities.length) {
+          const empty = document.createElement('p');
+          empty.className = 'text-sm text-slate-500';
+          empty.textContent = 'Belum ada laporan aktivitas.';
+          activities.append(empty);
+        }
+        for (const activity of resources.activities) {
+          const card = document.createElement('div');
+          card.className = 'rounded-xl bg-slate-50 p-3';
+          const title = document.createElement('p');
+          title.className = 'font-semibold';
+          title.textContent = `${activity.activity_type} · ${activity.field_name}`;
+          const detail = document.createElement('p');
+          detail.className = 'mt-1 text-sm text-slate-600';
+          detail.textContent = `${activity.activity_date} · ${activity.owner_name} · ${activity.crop_cycle_name || 'Musim tanam'}`;
+          card.append(title, detail);
+          if (activity.description) {
+            const note = document.createElement('p');
+            note.className = 'mt-1 text-sm text-slate-600';
+            note.textContent = activity.description;
+            card.append(note);
+          }
+          activities.append(card);
+        }
+      }
+
+      function updateItemOptions() {
+        const selected = assignmentSelect.selectedOptions[0];
+        const ownerId = selected && selected.dataset.ownerId;
+        const previous = itemSelect.value;
+        itemSelect.replaceChildren();
+        const none = document.createElement('option');
+        none.value = '';
+        none.textContent = 'Tidak memakai bahan';
+        itemSelect.append(none);
+        for (const item of resources.inventoryItems.filter((entry) => String(entry.owner_id) === ownerId)) {
+          const option = document.createElement('option');
+          option.value = item.id;
+          option.textContent = `${item.name} (${item.unit})`;
+          itemSelect.append(option);
+        }
+        if ([...itemSelect.options].some((option) => option.value === previous)) itemSelect.value = previous;
+        quantityWrap.classList.toggle('hidden', !itemSelect.value);
+        quantityInput.required = Boolean(itemSelect.value);
+      }
+
+      async function loadResources() {
+        try {
+          resources = await requestJson('/api/worker/assignments');
+          renderResources();
+        } catch (error) {
+          document.querySelector('#assignment-list').textContent = error.message;
+          document.querySelector('#activity-list').textContent = error.message;
+        }
+      }
+
+      async function joinOwner() {
+        let inviteCode = inviteInput.value.trim();
+        try {
+          if (inviteCode.includes('/')) {
+            inviteCode = new URL(inviteCode, location.origin).searchParams.get('invite') || '';
+          }
+          const result = await requestJson('/api/worker/join', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({ _csrf: csrfToken, inviteCode })
+          });
+          joinMessage.textContent = result.membership.alreadyMember
+            ? `Anda sudah terhubung dengan ${result.membership.owner.name}.`
+            : `Berhasil bergabung dengan ${result.membership.owner.name}.`;
+          inviteInput.value = '';
+        } catch (error) {
+          joinMessage.textContent = error.message;
+        }
+      }
+
+      document.querySelector('#join-button').addEventListener('click', joinOwner);
+      document.querySelector('#scan-button').addEventListener('click', async () => {
+        const reader = document.querySelector('#reader');
+        reader.classList.remove('hidden');
+        if (!window.Html5Qrcode) {
+          joinMessage.textContent = 'Pemindai kamera tidak dapat dimuat. Masukkan kode atau tautan undangan secara manual.';
+          reader.classList.add('hidden');
+          return;
+        }
+        try {
+          scanner = new Html5Qrcode('reader');
+          await scanner.start(
+            { facingMode: 'environment' },
+            { fps: 10, qrbox: { width: 230, height: 230 } },
+            async (decodedText) => {
+              inviteInput.value = decodedText;
+              await scanner.stop();
+              scanner = null;
+              reader.classList.add('hidden');
+              await joinOwner();
+            },
+            () => {}
+          );
+        } catch (error) {
+          reader.classList.add('hidden');
+          joinMessage.textContent = `Kamera tidak dapat dibuka: ${error.message || error}. Pastikan izin kamera diberikan dan gunakan HTTPS.`;
+        }
+      });
+
+      assignmentSelect.addEventListener('change', updateItemOptions);
+      itemSelect.addEventListener('change', updateItemOptions);
+      form.elements.date.value = localDate();
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const message = document.querySelector('#activity-message');
+        const body = new URLSearchParams(new FormData(form));
+        try {
+          const result = await requestJson('/api/worker/field-activities', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body
+          });
+          message.textContent = result.activity.consumedItem
+            ? `Aktivitas tersimpan. Pemakaian ${result.activity.consumedItem.name} dicatat ke stok owner.`
+            : 'Aktivitas berhasil disimpan.';
+          form.elements.description.value = '';
+          form.elements.quantity.value = '';
+          await loadResources();
+        } catch (error) {
+          message.textContent = error.message;
+        }
+      });
+
+      const invite = new URLSearchParams(location.search).get('invite');
+      if (invite) {
+        inviteInput.value = invite;
+        joinOwner();
+        history.replaceState(null, '', '/worker');
+      }
+      loadResources();
+    </script>
+  </body>
+</html>

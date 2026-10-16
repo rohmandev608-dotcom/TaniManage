@@ -1,0 +1,90 @@
+:root {
+  color-scheme: light;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: #183027;
+  background: #f4f8f3;
+}
+
+body {
+  margin: 0;
+  padding: 2rem 1rem;
+}
+
+.auth-card,
+.page {
+  box-sizing: border-box;
+  width: min(100%, 42rem);
+  margin: 3rem auto;
+  padding: 2rem;
+  background: #fff;
+  border: 1px solid #dce8dc;
+  border-radius: 1rem;
+  box-shadow: 0 1rem 3rem #193a2412;
+}
+
+.auth-card {
+  max-width: 28rem;
+}
+
+.brand {
+  color: #187043;
+  font-size: 1.1rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+h1 {
+  margin: 1.5rem 0 0.5rem;
+}
+
+p,
+small {
+  color: #52645a;
+  line-height: 1.6;
+}
+
+form,
+label {
+  display: grid;
+  gap: 0.65rem;
+}
+
+form {
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+
+input,
+select,
+textarea,
+button {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #c8d7cc;
+  border-radius: 0.5rem;
+  font: inherit;
+}
+
+button {
+  border: 0;
+  color: #fff;
+  background: #187043;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+a {
+  color: #187043;
+}
+
+.error {
+  color: #a12626;
+}
+
+.panel {
+  margin: 1.5rem 0;
+  padding: 1.25rem;
+  border-radius: 0.75rem;
+  background: #f2f8f2;
+}

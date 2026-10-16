@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Musim Tanam - TaniManage FMIS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased">
+    <div class="min-h-screen flex flex-col md:flex-row">
+        {{>sidebar}}
+        <div class="flex-1 flex flex-col md:ml-64">
+            {{>navbar}}
+            <main class="flex-1 space-y-6 p-4 sm:p-8">
+                <section>
+                    <h2 class="text-2xl font-extrabold text-slate-900">Musim Tanam</h2>
+                    <p class="mt-1 text-sm text-slate-500">Kelola siklus budidaya dan pantau laba/rugi aktivitas pada setiap lahan.</p>
+                </section>
+
+                <section class="grid grid-cols-1 gap-6 xl:grid-cols-3">
+                    <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                        <h3 class="text-lg font-bold text-slate-900">Mulai Musim Tanam</h3>
+                        <p class="mt-1 text-sm text-slate-500">Setiap lahan hanya dapat memiliki satu siklus aktif.</p>
+                        <form id="cycleForm" class="mt-5 space-y-4">
+                            <input type="hidden" name="_csrf" value="{{csrfToken}}">
+                            <label class="block text-sm font-semibold text-slate-700">
+                                Lahan
+                                <select name="fieldId" id="fieldId" required class="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5">
+                                    <option value="">Memuat lahan…</option>
+                                </select>
+                            </label>
+                            <label class="block text-sm font-semibold text-slate-700">
+                                Komoditas
+                                <input name="commodityName" required minlength="2" maxlength="100" class="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5" placeholder="Contoh: Padi">
+                            </label>
+                            <label class="block text-sm font-semibold text-slate-700">
+                                Varietas (opsional)
+                                <input name="variety" maxlength="100" class="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5" placeholder="Contoh: Ciherang">
+                            </label>
+                            <label class="block text-sm font-semibold text-slate-700">
+                                Tanggal mulai
+                                <input type="date" name="startDate" id="startDate" required class="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5">
+                            </label>
+                            <label class="block text-sm font-semibold text-slate-700">
+                                Estimasi panen (opsional)
+                                <input type="date" name="expectedHarvestDate" id="expectedHarvestDate" class="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5">
+                            </label>
+                            <p id="formMessage" class="text-sm text-rose-700" role="alert" aria-live="polite"></p>
+                            <button id="submitCycle" type="submit" class="w-full rounded-xl bg-emerald-600 px-4 py-3 font-bold text-white hover:bg-emerald-700">Mulai Siklus</button>
+                        </form>
+                    </div>
+
+                    <div class="space-y-6 xl:col-span-2">
+                        <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                            <div class="flex flex-wrap items-center justify-between gap-3">
+                                <div>
+                                    <h3 class="text-lg font-bold text-slate-900">Riwayat Siklus</h3>
+                                    <p id="cycleMessage" class="mt-1 text-sm text-slate-500" role="status" aria-live="polite">Memuat musim tanam…</p>
+                                </div>
+                            </div>
+                            <div id="cycleList" class="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2"></div>
+                        </section>
+
+                        <section id="reportPanel" class="hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                            <div class="flex flex-wrap items-start justify-between gap-3">
+                                <div>
+                                    <h3 id="reportTitle" class="text-lg font-bold text-slate-900">Rekapitulasi Siklus</h3>
+                                    <p id="reportSubtitle" class="mt-1 text-sm text-slate-500"></p>
+                                </div>
+                                <button id="completeCycle" type="button" class="hidden rounded-lg bg-slate-900 px-4 py-2 text-sm font-bold text-white hover:bg-slate-700">Selesaikan Musim</button>
+                            </div>
+                            <p id="reportMessage" class="mt-2 text-sm text-rose-700" role="alert"></p>
+                            <div class="mt-5 grid grid-cols-2 gap-3 xl:grid-cols-4">
+                                <article class="rounded-xl bg-emerald-50 p-4"><p class="text-xs font-semibold text-emerald-800">Pemasukan</p><p id="reportIncome" class="mt-1 font-extrabold text-emerald-800">Rp0</p></article>
+                                <article class="rounded-xl bg-rose-50 p-4"><p class="text-xs font-semibold text-rose-800">Pengeluaran</p><p id="reportExpense" class="mt-1 font-extrabold text-rose-800">Rp0</p></article>
+                                <article class="rounded-xl bg-slate-100 p-4"><p class="text-xs font-semibold text-slate-600">Laba Bersih</p><p id="reportProfit" class="mt-1 font-extrabold text-slate-900">Rp0</p></article>
+                                <article class="rounded-xl bg-blue-50 p-4"><p class="text-xs font-semibold text-blue-800">Margin</p><p id="reportMargin" class="mt-1 font-extrabold text-blue-800">0%</p></article>
+                            </div>
+                            <div class="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+                                <div>
+                                    <h4 class="font-bold text-slate-800">Aktivitas Siklus</h4>
+                                    <div class="mt-2 overflow-x-auto">
+                                        <table class="w-full min-w-[430px] text-left text-sm">
+                                            <thead class="bg-slate-50 text-xs uppercase text-slate-500"><tr><th class="p-2">Tanggal</th><th class="p-2">Aktivitas</th><th class="p-2 text-right">Biaya bahan</th></tr></thead>
+                                            <tbody id="reportActivities" class="divide-y divide-slate-100"></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold text-slate-800">Transaksi Keuangan</h4>
+                                    <div class="mt-2 overflow-x-auto">
+                                        <table class="w-full min-w-[430px] text-left text-sm">
+                                            <thead class="bg-slate-50 text-xs uppercase text-slate-500"><tr><th class="p-2">Tanggal</th><th class="p-2">Kategori</th><th class="p-2 text-right">Nominal</th></tr></thead>
+                                            <tbody id="reportTransactions" class="divide-y divide-slate-100"></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                            <p id="finalSnapshot" class="mt-4 hidden rounded-lg bg-amber-50 p-3 text-sm font-medium text-amber-900">Siklus selesai. Rekap laba/rugi dikunci pada saat penutupan.</p>
+                        </section>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+    <script>
+        const form = document.querySelector('#cycleForm');
+        const fieldSelect = document.querySelector('#fieldId');
+        const cycleList = document.querySelector('#cycleList');
+        const reportPanel = document.querySelector('#reportPanel');
+        const rupiah = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 });
+        const dateFormatter = new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' });
+        let selectedCycleId = null;
+
+        function todayLocal() {
+            const now = new Date();
+            return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+        }
+
+        function displayDate(value) {
+            return value ? dateFormatter.format(new Date(`${value}T00:00:00.000Z`)) : '—';
+        }
+
+        function addCell(row, value, className = '') {
+            const cell = document.createElement('td');
+            cell.className = `p-2 ${className}`;
+            cell.textContent = value;
+            row.append(cell);
+        }
+
+        async function request(url, options = {}) {
+            const response = await fetch(url, options);
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.error || 'Permintaan tidak dapat diproses.');
+            return result;
+        }
+
+        function renderCycleCard(cycle) {
+            const card = document.createElement('button');
+            card.type = 'button';
+            card.className = 'rounded-xl border border-slate-200 p-4 text-left transition hover:border-emerald-400 hover:bg-emerald-50';
+            const heading = document.createElement('div');
+            heading.className = 'flex items-center justify-between gap-2';
+            const name = document.createElement('span');
+            name.className = 'font-bold text-slate-900';
+            name.textContent = cycle.commodity_name + (cycle.variety ? ` · ${cycle.variety}` : '');
+            const status = document.createElement('span');
+            status.className = cycle.status === 'active'
+                ? 'rounded-full bg-emerald-100 px-2 py-1 text-xs font-bold text-emerald-800'
+                : 'rounded-full bg-slate-100 px-2 py-1 text-xs font-bold text-slate-600';
+            status.textContent = cycle.status === 'active' ? 'Aktif' : 'Selesai';
+            heading.append(name, status);
+            const details = document.createElement('span');
+            details.className = 'mt-2 block text-sm text-slate-600';
+            details.textContent = `${cycle.field_name} · ${displayDate(cycle.start_date)} – ${displayDate(cycle.end_date || cycle.expected_harvest_date)}`;
+            card.append(heading, details);
+            card.addEventListener('click', () => loadReport(cycle.id));
+            return card;
+        }
+
+        async function loadCycles(preferredId = selectedCycleId) {
+            const result = await request('/api/farmer/crop-cycles');
+            cycleList.replaceChildren();
+            cycleList.append(...result.cycles.map(renderCycleCard));
+            document.querySelector('#cycleMessage').textContent = result.cycles.length
+                ? `${result.cycles.length} siklus tercatat. Pilih siklus untuk melihat rekap.`
+                : 'Belum ada musim tanam.';
+
+            const availableFields = result.fields.filter((field) => !field.crop_cycle_id);
+            fieldSelect.replaceChildren(new Option(
+                availableFields.length ? 'Pilih lahan' : 'Tidak ada lahan yang tersedia',
+                ''
+            ));
+            for (const field of availableFields) fieldSelect.add(new Option(field.name, String(field.id)));
+            document.querySelector('#submitCycle').disabled = availableFields.length === 0;
+            if (preferredId && result.cycles.some((cycle) => cycle.id === preferredId)) {
+                await loadReport(preferredId);
+            } else if (result.cycles.length) {
+                await loadReport(result.cycles[0].id);
+            } else {
+                selectedCycleId = null;
+                reportPanel.classList.add('hidden');
+            }
+        }
+
+        async function loadReport(cycleId) {
+            const result = await request(`/api/farmer/crop-cycles/${cycleId}/report`);
+            selectedCycleId = cycleId;
+            const { cycle, summary } = result;
+            reportPanel.classList.remove('hidden');
+            document.querySelector('#reportTitle').textContent = `${cycle.commodity_name}${cycle.variety ? ` · ${cycle.variety}` : ''}`;
+            document.querySelector('#reportSubtitle').textContent =
+                `${cycle.field_name} · ${displayDate(cycle.start_date)}${cycle.end_date ? ` – ${displayDate(cycle.end_date)}` : ''}`;
+            document.querySelector('#reportIncome').textContent = rupiah.format(summary.totalIncome);
+            document.querySelector('#reportExpense').textContent = rupiah.format(summary.totalExpense);
+            document.querySelector('#reportProfit').textContent = rupiah.format(summary.netProfit);
+            document.querySelector('#reportProfit').className = `mt-1 font-extrabold ${summary.netProfit < 0 ? 'text-rose-800' : 'text-slate-900'}`;
+            document.querySelector('#reportMargin').textContent = `${Number(summary.profitMargin).toLocaleString('id-ID', { maximumFractionDigits: 2 })}%`;
+            document.querySelector('#completeCycle').classList.toggle('hidden', cycle.status !== 'active');
+            document.querySelector('#finalSnapshot').classList.toggle('hidden', cycle.status !== 'completed');
+            document.querySelector('#reportMessage').textContent = '';
+
+            const activityRows = document.querySelector('#reportActivities');
+            activityRows.replaceChildren();
+            for (const activity of result.activities) {
+                const row = document.createElement('tr');
+                addCell(row, displayDate(activity.activity_date));
+                const description = activity.item_name
+                    ? `${activity.activity_type} · ${activity.item_name} (${activity.quantity_milli / 1000} ${activity.item_unit})`
+                    : activity.activity_type;
+                addCell(row, description);
+                addCell(row, activity.total_cost_rupiah === null ? '—' : rupiah.format(activity.total_cost_rupiah), 'text-right');
+                activityRows.append(row);
+            }
+            const transactionRows = document.querySelector('#reportTransactions');
+            transactionRows.replaceChildren();
+            for (const transaction of result.transactions) {
+                const row = document.createElement('tr');
+                addCell(row, displayDate(transaction.transaction_date));
+                addCell(row, `${transaction.category} · ${transaction.type === 'income' ? 'Pemasukan' : 'Pengeluaran'}`);
+                addCell(row, rupiah.format(transaction.amount_rupiah), 'text-right');
+                transactionRows.append(row);
+            }
+        }
+
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const message = document.querySelector('#formMessage');
+            message.textContent = '';
+            const startDate = form.elements.startDate.value;
+            const harvestDate = form.elements.expectedHarvestDate.value;
+            if (harvestDate && harvestDate <= startDate) {
+                message.textContent = 'Estimasi panen harus setelah tanggal mulai.';
+                return;
+            }
+            try {
+                const result = await request('/api/farmer/crop-cycles', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams(new FormData(form))
+                });
+                form.elements.commodityName.value = '';
+                form.elements.variety.value = '';
+                form.elements.expectedHarvestDate.value = '';
+                message.className = 'text-sm text-emerald-700';
+                message.textContent = 'Musim tanam berhasil dimulai.';
+                await loadCycles(result.cycle.id);
+            } catch (error) {
+                message.className = 'text-sm text-rose-700';
+                message.textContent = error.message;
+            }
+        });
+
+        document.querySelector('#completeCycle').addEventListener('click', async () => {
+            if (!selectedCycleId || !confirm('Selesaikan musim tanam ini? Rekap laba/rugi akan dikunci.')) return;
+            try {
+                await request(`/api/farmer/crop-cycles/${selectedCycleId}/complete`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({ _csrf: form.elements._csrf.value })
+                });
+                await loadCycles(selectedCycleId);
+            } catch (error) {
+                document.querySelector('#reportMessage').textContent = error.message;
+            }
+        });
+
+        document.querySelector('#startDate').value = todayLocal();
+        document.querySelector('#menuToggle').addEventListener('click', () => {
+            document.querySelector('#sidebar').classList.toggle('-translate-x-full');
+            document.querySelector('#sidebarOverlay').classList.toggle('hidden');
+        });
+        document.querySelector('#sidebarOverlay').addEventListener('click', () => {
+            document.querySelector('#sidebar').classList.toggle('-translate-x-full');
+            document.querySelector('#sidebarOverlay').classList.toggle('hidden');
+        });
+        loadCycles().catch((error) => {
+            document.querySelector('#cycleMessage').textContent = error.message;
+        });
+    </script>
+</body>
+</html>

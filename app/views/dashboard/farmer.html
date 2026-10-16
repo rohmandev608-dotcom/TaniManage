@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - TaniManage FMIS</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased">
+
+    <div class="min-h-screen flex flex-col md:flex-row">
+
+        {{>sidebar}}
+
+        <!-- ================= KONTEN UTAMA ================= -->
+        <div class="flex-1 flex flex-col md:ml-64">
+
+            {{>navbar}}
+
+            <!-- ISI KONTEN DASHBOARD -->
+            <main id="farmerDashboard" data-dashboard="{{dashboardDataEncoded}}" class="p-4 sm:p-8 space-y-6 flex-1">
+
+                <!-- Ucapan Selamat Datang -->
+                <div class="bg-gradient-to-r from-emerald-700 to-teal-800 rounded-2xl p-6 text-white shadow-lg flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div class="space-y-1">
+                        <h2 class="text-xl sm:text-2xl font-extrabold">Selamat Datang Kembali, {{name}}! 👋</h2>
+                        <p class="text-emerald-100 text-sm">Berikut adalah ringkasan operasional kebun dan musim tanam Anda hari ini.</p>
+                    </div>
+                    <a href="/farmer/activities" class="bg-white text-emerald-800 font-semibold text-sm px-5 py-2.5 rounded-xl shadow hover:bg-emerald-50 transition">
+                        + Catat Aktivitas Baru
+                    </a>
+                </div>
+
+                <!-- KARTU STATISTIK UTAMA (Grid 4 Kolom) -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <!-- Total Lahan -->
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-2">
+                        <div class="flex justify-between items-center text-slate-500">
+                            <span class="text-sm font-medium">Total Lahan</span>
+                            <span class="p-2 bg-emerald-50 text-emerald-600 rounded-lg">🌾</span>
+                        </div>
+                        <div class="flex items-baseline space-x-2">
+                            <span class="text-2xl font-extrabold text-slate-900">{{totalAreaHectares}}</span>
+                            <span class="text-xs text-slate-500 font-medium">Hektar ({{fieldCount}} Petak)</span>
+                        </div>
+                    </div>
+
+                    <!-- Musim Tanam Aktif -->
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-2">
+                        <div class="flex justify-between items-center text-slate-500">
+                            <span class="text-sm font-medium">Musim Tanam</span>
+                            <span class="p-2 bg-amber-50 text-amber-600 rounded-lg">🌽</span>
+                        </div>
+                        <div class="flex items-baseline space-x-2">
+                            <span class="text-2xl font-extrabold text-slate-900">{{activeCycleCount}}</span>
+                            <span class="text-xs text-emerald-600 font-bold">Siklus Aktif</span>
+                        </div>
+                    </div>
+
+                    <!-- Stok Pupuk Kritis -->
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-2">
+                        <div class="flex justify-between items-center text-slate-500">
+                            <span class="text-sm font-medium">Jenis Inventaris</span>
+                            <span class="p-2 bg-amber-50 text-amber-600 rounded-lg">📦</span>
+                        </div>
+                        <div class="flex items-baseline space-x-2">
+                            <span class="text-2xl font-extrabold text-slate-900">{{inventoryItemCount}}</span>
+                            <span class="text-xs text-slate-500 font-medium">Jenis bahan</span>
+                        </div>
+                    </div>
+
+                    <!-- Saldo Musim Ini -->
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-2">
+                        <div class="flex justify-between items-center text-slate-500">
+                            <span class="text-sm font-medium">Estimasi Laba</span>
+                            <span class="p-2 bg-blue-50 text-blue-600 rounded-lg">💰</span>
+                        </div>
+                        <div class="flex items-baseline space-x-2">
+                            <span class="text-2xl font-extrabold text-slate-900">Rp {{activeCycleNetProfit}}</span>
+                            <span class="text-xs text-slate-500 font-medium">Laba/rugi siklus aktif</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- BAGIAN BAWAH: Aktivitas Terbaru & Cuaca / Jadwal -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    
+                    <!-- Tabel Aktivitas Terakhir (2 Kolom di LG) -->
+                    <div class="lg:col-span-2 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                        <div class="flex justify-between items-center">
+                            <h3 class="font-bold text-slate-800 text-base">Aktivitas Tani Terbaru</h3>
+                            <a href="/farmer/activities" class="text-xs text-emerald-600 font-semibold hover:underline">Lihat Semua</a>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-sm">
+                                <thead class="bg-slate-50 text-slate-500 uppercase text-xs">
+                                    <tr>
+                                        <th class="p-3 rounded-l-lg">Tanggal</th>
+                                        <th class="p-3">Lahan</th>
+                                        <th class="p-3">Aktivitas</th>
+                                        <th class="p-3 rounded-r-lg">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="recentActivityRows" class="divide-y divide-slate-100">
+                                    <tr><td colspan="4" class="p-3 text-slate-500">Memuat aktivitas…</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Ringkasan musim tanam aktif -->
+                    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4 flex flex-col justify-between">
+                        <div>
+                            <div class="mb-3 flex items-center justify-between gap-2">
+                                <h3 class="font-bold text-slate-800 text-base">Musim Tanam Aktif</h3>
+                                <a href="/farmer/crop-cycles" class="text-xs font-semibold text-emerald-600 hover:underline">Kelola</a>
+                            </div>
+                            <div id="activeCycleList" class="space-y-2">
+                                <p class="rounded-xl border border-slate-100 bg-slate-50 p-4 text-sm text-slate-500">Memuat musim tanam…</p>
+                            </div>
+                        </div>
+                        <div class="bg-emerald-50 border border-emerald-100 p-3 rounded-xl text-xs text-emerald-800 flex items-start space-x-2">
+                            <span>ℹ️</span>
+                            <p>Ringkasan dashboard diperbarui dari data lahan, inventaris, aktivitas, keuangan, dan musim tanam milik Anda.</p>
+                        </div>
+                    </div>
+
+                </div>
+
+            </main>
+        </div>
+    </div>
+
+    <!-- SCRIPT JAVASCRIPT UNTUK SIDEBAR MOBILE -->
+    <script>
+        const sidebar = document.getElementById('sidebar');
+        const sidebarOverlay = document.getElementById('sidebarOverlay');
+        const menuToggle = document.getElementById('menuToggle');
+
+        function toggleSidebar() {
+            sidebar.classList.toggle('-translate-x-full');
+            sidebarOverlay.classList.toggle('hidden');
+        }
+
+        menuToggle.addEventListener('click', toggleSidebar);
+        sidebarOverlay.addEventListener('click', toggleSidebar);
+
+        const dateFormatter = new Intl.DateTimeFormat('id-ID', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+            timeZone: 'UTC'
+        });
+
+        function createCell(row, text, className = '') {
+            const cell = document.createElement('td');
+            cell.className = `p-3 ${className}`;
+            cell.textContent = text;
+            row.append(cell);
+        }
+
+        function loadDashboardData() {
+            const encodedData = document.querySelector('#farmerDashboard').dataset.dashboard;
+            const result = JSON.parse(decodeURIComponent(encodedData));
+            const activityRows = document.querySelector('#recentActivityRows');
+            activityRows.replaceChildren();
+            if (result.recentActivities.length === 0) {
+                const row = document.createElement('tr');
+                const cell = document.createElement('td');
+                cell.colSpan = 4;
+                cell.className = 'p-3 text-slate-500';
+                cell.textContent = 'Belum ada aktivitas lahan.';
+                row.append(cell);
+                activityRows.append(row);
+            } else {
+                for (const activity of result.recentActivities) {
+                    const row = document.createElement('tr');
+                    createCell(row, dateFormatter.format(new Date(`${activity.activity_date}T00:00:00.000Z`)), 'whitespace-nowrap text-slate-600');
+                    createCell(row, activity.field_name, 'font-semibold text-slate-800');
+                    createCell(row, activity.description
+                        ? `${activity.activity_type} — ${activity.description}`
+                        : activity.activity_type, 'text-slate-600');
+                    const status = document.createElement('td');
+                    status.className = 'p-3';
+                    const badge = document.createElement('span');
+                    badge.className = 'bg-emerald-100 text-emerald-700 text-xs px-2.5 py-1 rounded-full font-medium';
+                    badge.textContent = 'Tercatat';
+                    status.append(badge);
+                    row.append(status);
+                    activityRows.append(row);
+                }
+            }
+
+            const cycleList = document.querySelector('#activeCycleList');
+            cycleList.replaceChildren();
+            if (result.activeCycles.length === 0) {
+                const empty = document.createElement('p');
+                empty.className = 'rounded-xl border border-slate-100 bg-slate-50 p-4 text-sm text-slate-500';
+                empty.textContent = 'Belum ada musim tanam aktif.';
+                cycleList.append(empty);
+            } else {
+                for (const cycle of result.activeCycles) {
+                    const item = document.createElement('a');
+                    item.href = '/farmer/crop-cycles';
+                    item.className = 'block rounded-xl border border-slate-100 bg-slate-50 p-4 hover:border-emerald-300 hover:bg-emerald-50';
+                    const commodity = document.createElement('span');
+                    commodity.className = 'block font-semibold text-slate-800';
+                    commodity.textContent = cycle.commodity_name + (cycle.variety ? ` · ${cycle.variety}` : '');
+                    const field = document.createElement('span');
+                    field.className = 'mt-1 block text-xs text-slate-500';
+                    field.textContent = `${cycle.field_name} · mulai ${dateFormatter.format(new Date(`${cycle.start_date}T00:00:00.000Z`))}`;
+                    item.append(commodity, field);
+                    cycleList.append(item);
+                }
+            }
+        }
+
+        try {
+            loadDashboardData();
+        } catch (error) {
+            document.querySelector('#recentActivityRows').innerHTML =
+                '<tr><td colspan="4" class="p-3 text-rose-700">Data dashboard tidak dapat dimuat.</td></tr>';
+            document.querySelector('#activeCycleList').textContent = 'Silakan muat ulang halaman.';
+        }
+    </script>
+</body>
+</html>

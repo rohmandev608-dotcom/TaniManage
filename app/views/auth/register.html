@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Daftar — TaniManage</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <main class="auth-card">
+      <a class="brand" href="/">🌱 TaniManage</a>
+      <h1>Buat akun</h1>
+      <p>Daftar untuk mulai mengelola aktivitas pertanian.</p>
+      <p class="error" role="alert">{{error}}</p>
+      <form method="post" action="/register">
+        <input type="hidden" name="_csrf" value="{{csrfToken}}">
+        <label>Nama
+          <input name="name" value="{{name}}" required minlength="2" maxlength="80" autocomplete="name">
+        </label>
+        <label>Email
+          <input type="email" name="email" value="{{email}}" required maxlength="254" autocomplete="email">
+        </label>
+        <label>Password
+          <input type="password" name="password" required minlength="12" maxlength="128" autocomplete="new-password">
+          <small>Minimal 12 karakter.</small>
+        </label>
+        <label>Peran
+          <select name="role">
+            <option value="farmer" selected>Petani / Pemilik Lahan</option>
+            <option value="worker">Pekerja Tani</option>
+          </select>
+        </label>
+        <button type="submit">Daftar</button>
+      </form>
+      <p>Sudah punya akun? <a href="/login">Masuk</a></p>
+    </main>
+  </body>
+</html>

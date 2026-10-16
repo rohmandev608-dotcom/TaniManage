@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventaris - TaniManage FMIS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased">
+    <div class="min-h-screen flex flex-col md:flex-row">
+        {{>sidebar}}
+        <div class="flex-1 flex flex-col md:ml-64">
+            {{>navbar}}
+            <main class="p-4 sm:p-8 space-y-6 flex-1">
+                <section>
+                    <h2 class="text-2xl font-extrabold text-slate-900">Stok Inventaris</h2>
+                    <p class="mt-1 text-sm text-slate-500">Pembelian menambah stok gudang. Biaya operasional lahan baru diakui saat bahan digunakan.</p>
+                </section>
+
+                <section class="grid grid-cols-1 gap-6 xl:grid-cols-3">
+                    <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                        <h3 class="text-lg font-bold text-slate-900">Catat Pembelian / Stok Masuk</h3>
+                        <p class="mt-1 text-sm text-slate-500">Gunakan bahan yang ada atau daftarkan bahan baru.</p>
+                        <form id="purchaseForm" class="mt-5 space-y-4">
+                            <input type="hidden" name="_csrf" value="{{csrfToken}}">
+                            <label class="block text-sm font-semibold text-slate-700">
+                                Bahan inventaris
+                                <select name="itemId" id="itemId" class="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5">
+                                    <option value="">+ Daftarkan bahan baru</option>
+                                </select>
+                            </label>
+                            <div id="newItemFields" class="space-y-4">
+                                <label class="block text-sm font-semibold text-slate-700">
+                                    Nama bahan
+                                    <input name="itemName" required minlength="2" maxlength="100" placeholder="Contoh: Pupuk NPK" class="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5">
+                                </label>
+                                <label class="block text-sm font-semibold text-slate-700">
+                                    Satuan
+                                    <input name="unit" required maxlength="20" placeholder="kg, liter, sak" class="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5">
+                                </label>
+                            </div>
+                            <label class="block text-sm font-semibold text-slate-700">
+                                Tanggal pembelian
+                                <input type="date" name="date" id="purchaseDate" required class="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5">
+                            </label>
+                            <label class="block text-sm font-semibold text-slate-700">
+                                Jumlah masuk
+                                <input type="number" name="quantity" required min="0.001" max="999999999" step="0.001" placeholder="Contoh: 25" class="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5">
+                            </label>
+                            <label class="block text-sm font-semibold text-slate-700">
+                                Total biaya pembelian (Rupiah)
+                                <input type="number" name="amountRupiah" required min="1" max="9007199254740991" step="1" placeholder="Contoh: 350000" class="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5">
+                            </label>
+                            <p id="purchaseMessage" class="text-sm text-rose-700" role="alert" aria-live="polite"></p>
+                            <button type="submit" class="w-full rounded-xl bg-emerald-600 px-4 py-3 font-bold text-white hover:bg-emerald-700">Simpan Pembelian</button>
+                        </form>
+                    </div>
+
+                    <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm xl:col-span-2">
+                        <div class="mb-4 flex flex-wrap items-end justify-between gap-2">
+                            <div>
+                                <h3 class="text-lg font-bold text-slate-900">Daftar Stok</h3>
+                                <p class="text-sm text-slate-500">Nilai rata-rata biaya persediaan dihitung dari seluruh pembelian.</p>
+                            </div>
+                            <a href="/farmer/activities" class="text-sm font-semibold text-emerald-700 hover:underline">Catat aktivitas lahan →</a>
+                        </div>
+                        <p id="inventoryMessage" class="mb-3 text-sm text-slate-500" role="status" aria-live="polite">Memuat stok…</p>
+                        <div class="overflow-x-auto">
+                            <table class="w-full min-w-[540px] text-left text-sm">
+                                <thead class="bg-slate-50 text-xs uppercase text-slate-500">
+                                    <tr>
+                                        <th class="rounded-l-lg p-3">Nama bahan</th>
+                                        <th class="p-3">Stok gudang</th>
+                                        <th class="rounded-r-lg p-3 text-right">Biaya rata-rata / satuan</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="inventoryRows" class="divide-y divide-slate-100"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+    <script>
+        const purchaseForm = document.querySelector('#purchaseForm');
+        const itemSelect = document.querySelector('#itemId');
+        const newItemFields = document.querySelector('#newItemFields');
+        const inventoryRows = document.querySelector('#inventoryRows');
+        const rupiah = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 });
+
+        function todayLocal() {
+            const now = new Date();
+            return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+        }
+
+        function setItemFields() {
+            const creatingNewItem = itemSelect.value === '';
+            newItemFields.classList.toggle('hidden', !creatingNewItem);
+            purchaseForm.elements.itemName.required = creatingNewItem;
+            purchaseForm.elements.unit.required = creatingNewItem;
+        }
+
+        async function loadInventory() {
+            const response = await fetch('/api/farmer/inventory');
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.error || 'Stok inventaris tidak dapat dimuat.');
+            itemSelect.replaceChildren(new Option('+ Daftarkan bahan baru', ''));
+            inventoryRows.replaceChildren();
+
+            if (result.items.length === 0) {
+                document.querySelector('#inventoryMessage').textContent = 'Belum ada inventaris. Catat pembelian pertama untuk membuat bahan baru.';
+            } else {
+                document.querySelector('#inventoryMessage').textContent = `${result.items.length} jenis bahan di gudang.`;
+            }
+
+            for (const item of result.items) {
+                itemSelect.add(new Option(`${item.name} (${item.quantity} ${item.unit})`, String(item.id)));
+                const row = document.createElement('tr');
+                const name = document.createElement('td');
+                name.className = 'p-3 font-semibold text-slate-800';
+                name.textContent = item.name;
+                const quantity = document.createElement('td');
+                quantity.className = 'p-3 text-slate-600';
+                quantity.textContent = `${item.quantity} ${item.unit}`;
+                const averageCost = document.createElement('td');
+                averageCost.className = 'p-3 text-right text-slate-600';
+                averageCost.textContent = `${rupiah.format(item.averageUnitCostRupiah)} / ${item.unit}`;
+                row.append(name, quantity, averageCost);
+                inventoryRows.append(row);
+            }
+            setItemFields();
+        }
+
+        itemSelect.addEventListener('change', setItemFields);
+        purchaseForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const message = document.querySelector('#purchaseMessage');
+            message.textContent = '';
+            try {
+                const response = await fetch('/api/farmer/inventory/purchases', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams(new FormData(purchaseForm))
+                });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.error || 'Pembelian tidak dapat disimpan.');
+                purchaseForm.elements.quantity.value = '';
+                purchaseForm.elements.amountRupiah.value = '';
+                await loadInventory();
+                if (result.item) itemSelect.value = String(result.item.id);
+                setItemFields();
+                message.className = 'text-sm text-emerald-700';
+                message.textContent = 'Pembelian tersimpan dan stok gudang berhasil diperbarui.';
+            } catch (error) {
+                message.className = 'text-sm text-rose-700';
+                message.textContent = error.message;
+            }
+        });
+
+        document.querySelector('#purchaseDate').value = todayLocal();
+        document.querySelector('#menuToggle').addEventListener('click', () => {
+            document.querySelector('#sidebar').classList.toggle('-translate-x-full');
+            document.querySelector('#sidebarOverlay').classList.toggle('hidden');
+        });
+        document.querySelector('#sidebarOverlay').addEventListener('click', () => {
+            document.querySelector('#sidebar').classList.toggle('-translate-x-full');
+            document.querySelector('#sidebarOverlay').classList.toggle('hidden');
+        });
+        loadInventory().catch((error) => {
+            document.querySelector('#inventoryMessage').textContent = error.message;
+            document.querySelector('#purchaseMessage').textContent = 'Form pembelian belum dapat digunakan.';
+        });
+    </script>
+</body>
+</html>

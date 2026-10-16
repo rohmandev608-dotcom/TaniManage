@@ -1,0 +1,14 @@
+{
+  "name": "web-petani",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Kerangka web petani dengan pola MVC tanpa framework",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node --test"
+  }
+}

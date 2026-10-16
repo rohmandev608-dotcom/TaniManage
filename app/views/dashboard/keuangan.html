@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Keuangan - TaniManage FMIS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased">
+    <div class="min-h-screen flex flex-col md:flex-row">
+        {{>sidebar}}
+        <div class="flex-1 flex flex-col md:ml-64">
+            {{>navbar}}
+            <main class="p-4 sm:p-8 space-y-6 flex-1">
+                <section class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                    <div>
+                        <h2 class="text-2xl font-extrabold text-slate-900">Keuangan Pertanian</h2>
+                        <p class="mt-1 text-sm text-slate-500">Pilih musim tanam untuk menyamakan laporan dengan rekap musim tanam.</p>
+                    </div>
+                    <div class="grid w-full grid-cols-1 gap-3 sm:max-w-2xl sm:grid-cols-2">
+                        <label class="text-sm font-semibold text-slate-700">
+                            Filter lahan
+                            <select id="fieldFilter" class="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200">
+                                <option value="all">Semua Lahan</option>
+                                <option value="unassigned">Tidak terkait lahan</option>
+                            </select>
+                        </label>
+                        <label class="text-sm font-semibold text-slate-700">
+                            Filter musim tanam
+                            <select id="cropCycleFilter" class="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200">
+                                <option value="all">Semua Musim Tanam</option>
+                            </select>
+                        </label>
+                    </div>
+                </section>
+
+                <section class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Ringkasan keuangan">
+                    <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                        <p class="text-sm font-medium text-slate-500">Total Pemasukan</p>
+                        <p id="totalIncome" class="mt-2 text-2xl font-extrabold text-emerald-700">Rp0</p>
+                    </article>
+                    <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                        <p class="text-sm font-medium text-slate-500">Total Pengeluaran</p>
+                        <p id="totalExpense" class="mt-2 text-2xl font-extrabold text-rose-700">Rp0</p>
+                    </article>
+                    <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                        <p class="text-sm font-medium text-slate-500">Laba Bersih</p>
+                        <p id="netProfit" class="mt-2 text-2xl font-extrabold text-slate-900">Rp0</p>
+                    </article>
+                    <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                        <p class="text-sm font-medium text-slate-500">Margin Keuntungan</p>
+                        <p id="profitMargin" class="mt-2 text-2xl font-extrabold text-blue-700">0%</p>
+                    </article>
+                </section>
+
+                <section class="grid grid-cols-1 gap-6 xl:grid-cols-3">
+                    <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm xl:col-span-1">
+                        <div class="mb-5">
+                            <h3 class="text-lg font-bold text-slate-900">Tambah Transaksi</h3>
+                            <p class="mt-1 text-sm text-slate-500">Catat pendapatan atau biaya operasional.</p>
+                        </div>
+                        <form id="transactionForm" class="space-y-4">
+                            <input type="hidden" name="_csrf" value="{{csrfToken}}">
+                            <label class="block text-sm font-semibold text-slate-700">
+                                Tipe transaksi
+                                <select name="type" id="transactionType" required class="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5">
+                                    <option value="expense">Pengeluaran</option>
+                                    <option value="income">Pemasukan</option>
+                                </select>
+                            </label>
+                            <label class="block text-sm font-semibold text-slate-700">
+                                Kategori
+                                <select name="category" id="transactionCategory" required class="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5"></select>
+                            </label>
+                            <label class="block text-sm font-semibold text-slate-700">
+                                Lahan
+                                <select name="fieldId" id="transactionField" class="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5">
+                                    <option value="">Tidak terkait lahan</option>
+                                </select>
+                            </label>
+                            <label class="block text-sm font-semibold text-slate-700">
+                                Tanggal
+                                <input type="date" name="date" id="transactionDate" required class="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5">
+                            </label>
+                            <label class="block text-sm font-semibold text-slate-700">
+                                Nominal (Rupiah)
+                                <input type="number" name="amountRupiah" min="1" step="1" required inputmode="numeric" placeholder="Contoh: 150000" class="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5">
+                            </label>
+                            <label class="block text-sm font-semibold text-slate-700">
+                                Catatan (opsional)
+                                <textarea name="description" maxlength="500" rows="2" placeholder="Contoh: Pembelian pupuk untuk petak utara" class="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5"></textarea>
+                            </label>
+                            <p id="formMessage" class="text-sm text-rose-700" role="alert" aria-live="polite"></p>
+                            <button type="submit" class="w-full rounded-xl bg-emerald-600 px-4 py-3 font-bold text-white hover:bg-emerald-700">Simpan Transaksi</button>
+                        </form>
+                    </div>
+
+                    <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm xl:col-span-2">
+                        <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
+                            <div>
+                                <h3 class="text-lg font-bold text-slate-900">Riwayat Transaksi</h3>
+                                <p id="transactionCount" class="mt-1 text-sm text-slate-500" aria-live="polite">Memuat transaksi…</p>
+                            </div>
+                        </div>
+                        <p id="listMessage" class="mb-3 text-sm text-rose-700" role="alert"></p>
+                        <div class="overflow-x-auto">
+                            <table class="w-full min-w-[680px] text-left text-sm">
+                                <thead class="bg-slate-50 text-xs uppercase text-slate-500">
+                                    <tr>
+                                        <th class="rounded-l-lg p-3">Tanggal</th>
+                                        <th class="p-3">Tipe / Kategori</th>
+                                        <th class="p-3">Lahan</th>
+                                        <th class="p-3">Catatan</th>
+                                        <th class="rounded-r-lg p-3 text-right">Nominal</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="transactionRows" class="divide-y divide-slate-100"></tbody>
+                            </table>
+                        </div>
+                        <p id="emptyState" class="hidden py-10 text-center text-sm text-slate-500">Belum ada transaksi untuk filter ini.</p>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        const form = document.querySelector('#transactionForm');
+        const fieldFilter = document.querySelector('#fieldFilter');
+        const cropCycleFilter = document.querySelector('#cropCycleFilter');
+        const transactionField = document.querySelector('#transactionField');
+        const transactionType = document.querySelector('#transactionType');
+        const transactionCategory = document.querySelector('#transactionCategory');
+        const transactionRows = document.querySelector('#transactionRows');
+        const categories = {
+            income: ['Penjualan Panen', 'Pendapatan Lain'],
+            expense: ['Beli Pupuk', 'Bibit', 'Upah Buruh', 'Pestisida', 'Irigasi', 'Sewa Alat', 'Transportasi', 'Biaya Lain']
+        };
+        const rupiah = new Intl.NumberFormat('id-ID', {
+            style: 'currency',
+            currency: 'IDR',
+            maximumFractionDigits: 0
+        });
+        const dateFormatter = new Intl.DateTimeFormat('id-ID', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+            timeZone: 'UTC'
+        });
+
+        function updateCategories() {
+            transactionCategory.replaceChildren();
+            for (const category of categories[transactionType.value]) {
+                const option = document.createElement('option');
+                option.value = category;
+                option.textContent = category;
+                transactionCategory.append(option);
+            }
+        }
+
+        function addCell(row, content, className = '') {
+            const cell = document.createElement('td');
+            cell.className = `p-3 ${className}`;
+            cell.textContent = content;
+            row.append(cell);
+            return cell;
+        }
+
+        async function loadTransactions() {
+            const selectedField = fieldFilter.value;
+            const params = new URLSearchParams();
+            if (selectedField !== 'all') params.set('fieldId', selectedField);
+            if (cropCycleFilter.value !== 'all') params.set('cropCycleId', cropCycleFilter.value);
+            const query = params.size ? `?${params}` : '';
+            const response = await fetch(`/api/farmer/finance${query}`);
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.error || 'Transaksi tidak dapat dimuat.');
+
+            transactionRows.replaceChildren();
+            document.querySelector('#listMessage').textContent = '';
+            document.querySelector('#totalIncome').textContent = rupiah.format(result.summary.totalIncome);
+            document.querySelector('#totalExpense').textContent = rupiah.format(result.summary.totalExpense);
+            document.querySelector('#netProfit').textContent = rupiah.format(result.summary.netProfit);
+            document.querySelector('#netProfit').className = `mt-2 text-2xl font-extrabold ${result.summary.netProfit < 0 ? 'text-rose-700' : 'text-slate-900'}`;
+            document.querySelector('#profitMargin').textContent = `${Number(result.summary.profitMargin).toLocaleString('id-ID', { maximumFractionDigits: 2 })}%`;
+            document.querySelector('#transactionCount').textContent = `${result.transactions.length} transaksi`;
+            document.querySelector('#emptyState').classList.toggle('hidden', result.transactions.length > 0);
+
+            for (const transaction of result.transactions) {
+                const row = document.createElement('tr');
+                addCell(row, dateFormatter.format(new Date(`${transaction.transaction_date}T00:00:00.000Z`)));
+
+                const typeCell = document.createElement('td');
+                typeCell.className = 'p-3';
+                const badge = document.createElement('span');
+                badge.className = transaction.type === 'income'
+                    ? 'rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700'
+                    : 'rounded-full bg-rose-100 px-2.5 py-1 text-xs font-semibold text-rose-700';
+                badge.textContent = transaction.type === 'income' ? 'Pemasukan' : 'Pengeluaran';
+                const category = document.createElement('span');
+                category.className = 'mt-1 block text-xs text-slate-500';
+                category.textContent = transaction.category;
+                typeCell.append(badge, category);
+                row.append(typeCell);
+
+                addCell(row, transaction.field_name
+                    ? `${transaction.field_name}${transaction.crop_cycle_name ? ` · ${transaction.crop_cycle_name}` : ''}`
+                    : 'Tanpa lahan');
+                addCell(row, transaction.description || '—', 'max-w-48 truncate');
+                addCell(row, rupiah.format(transaction.amount_rupiah), 'text-right font-semibold');
+                transactionRows.append(row);
+            }
+        }
+
+        async function loadFields() {
+            const response = await fetch('/api/farmer/finance');
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.error || 'Daftar lahan tidak dapat dimuat.');
+
+            for (const field of result.fields) {
+                const filterOption = document.createElement('option');
+                filterOption.value = String(field.id);
+                filterOption.textContent = field.name;
+                fieldFilter.append(filterOption);
+
+                const formOption = document.createElement('option');
+                formOption.value = String(field.id);
+                formOption.textContent = field.crop_cycle_id
+                    ? `${field.name} · ${field.crop_cycle_name}`
+                    : `${field.name} · belum ada musim aktif`;
+                formOption.disabled = !field.crop_cycle_id;
+                transactionField.append(formOption);
+            }
+            for (const cycle of result.cropCycles) {
+                const option = document.createElement('option');
+                option.value = String(cycle.id);
+                option.dataset.fieldId = String(cycle.field_id);
+                option.textContent = `${cycle.field_name} · ${cycle.commodity_name} · ${cycle.status === 'active' ? 'Aktif' : 'Selesai'}`;
+                cropCycleFilter.append(option);
+            }
+        }
+
+        transactionType.addEventListener('change', updateCategories);
+        fieldFilter.addEventListener('change', () => {
+            cropCycleFilter.value = 'all';
+            loadTransactions().catch((error) => {
+                document.querySelector('#listMessage').textContent = error.message;
+            });
+        });
+        cropCycleFilter.addEventListener('change', () => {
+            if (cropCycleFilter.value !== 'all') {
+                fieldFilter.value = cropCycleFilter.selectedOptions[0].dataset.fieldId;
+            }
+            loadTransactions().catch((error) => {
+                document.querySelector('#listMessage').textContent = error.message;
+            });
+        });
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const formMessage = document.querySelector('#formMessage');
+            formMessage.textContent = '';
+            try {
+                const response = await fetch('/api/farmer/finance', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams(new FormData(form))
+                });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.error || 'Transaksi tidak dapat disimpan.');
+                form.elements.amountRupiah.value = '';
+                form.elements.description.value = '';
+                await loadTransactions();
+            } catch (error) {
+                formMessage.textContent = error.message;
+            }
+        });
+
+        document.querySelector('#menuToggle').addEventListener('click', () => {
+            document.querySelector('#sidebar').classList.toggle('-translate-x-full');
+            document.querySelector('#sidebarOverlay').classList.toggle('hidden');
+        });
+        document.querySelector('#sidebarOverlay').addEventListener('click', () => {
+            document.querySelector('#sidebar').classList.toggle('-translate-x-full');
+            document.querySelector('#sidebarOverlay').classList.toggle('hidden');
+        });
+
+        const today = new Date();
+        document.querySelector('#transactionDate').value = new Date(
+            today.getTime() - today.getTimezoneOffset() * 60000
+        ).toISOString().slice(0, 10);
+        updateCategories();
+        loadFields()
+            .then(loadTransactions)
+            .catch((error) => {
+                document.querySelector('#listMessage').textContent = error.message;
+                document.querySelector('#transactionCount').textContent = 'Gagal memuat data.';
+            });
+    </script>
+</body>
+</html>

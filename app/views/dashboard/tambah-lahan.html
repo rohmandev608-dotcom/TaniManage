@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{pageTitle}} - TaniManage FMIS</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased">
+
+    <div class="min-h-screen flex flex-col md:flex-row">
+
+        {{>sidebar}}
+
+        <!-- ================= KONTEN UTAMA ================= -->
+        <div class="flex-1 flex flex-col md:ml-64">
+
+            {{>navbar}}
+            <div class="flex justify-end px-4 pt-4 sm:px-8">
+                    <a href="/farmer" class="text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg transition">
+                        &larr; Kembali
+                    </a>
+            </div>
+
+            <!-- ISI KONTEN FORM -->
+            <main class="p-4 sm:p-8 max-w-4xl mx-auto w-full space-y-6">
+
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8">
+                    <div class="border-b border-slate-100 pb-4 mb-6">
+                        <h2 class="text-lg font-extrabold text-slate-900">{{formHeading}}</h2>
+                        <p class="text-xs sm:text-sm text-slate-500">Masukkan detail data wilayah dan karakteristik lahan pertanian Anda untuk mulai memantau musim tanam.</p>
+                    </div>
+
+                    <p class="mb-4 text-sm font-medium text-rose-700" role="alert">{{error}}</p>
+
+                    <!-- FORM INPUT LAHAN -->
+                    <form id="formTambahLahan" class="space-y-6" method="post" action="{{formAction}}">
+                        <input type="hidden" name="_csrf" value="{{csrfToken}}">
+                        
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                            <!-- Nama Lahan -->
+                            <div class="space-y-2">
+                                <label class="text-sm font-semibold text-slate-700 block">Nama / Blok Lahan <span class="text-red-500">*</span></label>
+                                <input type="text" name="name" value="{{landName}}" required minlength="2" maxlength="100" placeholder="Contoh: Petak Blok A - Sawah Utara" 
+                                       class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm">
+                            </div>
+
+                            <!-- Luas Lahan -->
+                            <div class="space-y-2">
+                                <label class="text-sm font-semibold text-slate-700 block">Luas Lahan (Hektar) <span class="text-red-500">*</span></label>
+                                <input type="number" name="areaHectares" value="{{areaHectares}}" step="0.01" min="0.01" max="100000" required placeholder="Contoh: 1.5" 
+                                       class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                            <!-- Jenis Tanah -->
+                            <div class="space-y-2">
+                                <label class="text-sm font-semibold text-slate-700 block">Jenis Tanah</label>
+                                <select name="soilType" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm bg-white">
+                                    <option value="">Pilih Jenis Tanah</option>
+                                    <option value="alluvial" {{alluvialSelected}}>Tanah Aluvial (Endapan Sungai)</option>
+                                    <option value="volcanic" {{volcanicSelected}}>Tanah Vulkanik (Andosol)</option>
+                                    <option value="humus" {{humusSelected}}>Tanah Humus / Gambut</option>
+                                    <option value="latosol" {{latosolSelected}}>Tanah Latosol (Merah Kuning)</option>
+                                </select>
+                            </div>
+
+                            <!-- Komoditas Utama / Rencana Awal -->
+                            <div class="space-y-2">
+                                <label class="text-sm font-semibold text-slate-700 block">Rencana Komoditas</label>
+                                <input type="text" name="commodity" value="{{commodity}}" maxlength="100" placeholder="Contoh: Jagung Manis / Cabai Merah" 
+                                       class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm">
+                            </div>
+                        </div>
+
+                        <!-- Lokasi / Koordinat -->
+                        <div class="space-y-2">
+                            <label class="text-sm font-semibold text-slate-700 block">Lokasi / Titik Koordinat (Opsional)</label>
+                            <input type="text" name="coordinates" value="{{coordinates}}" maxlength="100" placeholder="Contoh: -8.2192, 114.3691" 
+                                   class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm">
+                            <p class="text-xs text-slate-400">Anda juga dapat menyalin koordinat titik tengah lahan dari Google Maps.</p>
+                        </div>
+
+                        <!-- Catatan Tambahan -->
+                        <div class="space-y-2">
+                            <label class="text-sm font-semibold text-slate-700 block">Catatan / Keterangan Tambahan</label>
+                            <textarea name="notes" rows="3" maxlength="2000" placeholder="Contoh: Dekat dengan saluran irigasi utama, akses jalan traktor mudah..." 
+                                      class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm">{{notes}}</textarea>
+                        </div>
+
+                        <!-- Tombol Aksi -->
+                        <div class="flex items-center justify-end space-x-3 pt-4 border-t border-slate-100">
+                            <a href="/farmer" class="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 text-sm font-semibold hover:bg-slate-50 transition">
+                                Batal
+                            </a>
+                            <button type="submit" class="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold shadow-md transition">
+                                {{submitLabel}}
+                            </button>
+                        </div>
+
+                    </form>
+                </div>
+
+            </main>
+        </div>
+    </div>
+
+    <!-- SCRIPT JAVASCRIPT -->
+    <script>
+        // Toggle Sidebar Mobile
+        const sidebar = document.getElementById('sidebar');
+        const sidebarOverlay = document.getElementById('sidebarOverlay');
+        const menuToggle = document.getElementById('menuToggle');
+
+        function toggleSidebar() {
+            sidebar.classList.toggle('-translate-x-full');
+            sidebarOverlay.classList.toggle('hidden');
+        }
+
+        menuToggle.addEventListener('click', toggleSidebar);
+        sidebarOverlay.addEventListener('click', toggleSidebar);
+
+    </script>
+</body>
+</html>

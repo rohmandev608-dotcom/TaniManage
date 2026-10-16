@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aktivitas Lahan - TaniManage FMIS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased">
+    <div class="min-h-screen flex flex-col md:flex-row">
+        {{>sidebar}}
+        <div class="flex-1 flex flex-col md:ml-64">
+            {{>navbar}}
+            <main class="p-4 sm:p-8 space-y-6 flex-1">
+                <section>
+                    <h2 class="text-2xl font-extrabold text-slate-900">Aktivitas Harian Lahan</h2>
+                    <p class="mt-1 text-sm text-slate-500">Pemakaian inventaris mengurangi stok dan membebankan biaya bahan ke lahan secara otomatis.</p>
+                </section>
+
+                <section class="grid grid-cols-1 gap-6 xl:grid-cols-3">
+                    <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                        <h3 class="text-lg font-bold text-slate-900">Catat Aktivitas</h3>
+                        <form id="activityForm" class="mt-5 space-y-4">
+                            <input type="hidden" name="_csrf" value="{{csrfToken}}">
+                            <label class="block text-sm font-semibold text-slate-700">
+                                Lahan
+                                <select name="fieldId" id="fieldId" required class="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5">
+                                    <option value="">Memuat lahan…</option>
+                                </select>
+                            </label>
+                            <label class="block text-sm font-semibold text-slate-700">
+                                Jenis aktivitas
+                                <select name="activityType" required class="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5">
+                                    <option>Pemupukan</option>
+                                    <option>Penyemprotan</option>
+                                    <option>Penyiraman</option>
+                                    <option>Penyiangan</option>
+                                    <option>Pengolahan Tanah</option>
+                                    <option>Penanaman</option>
+                                    <option>Panen</option>
+                                    <option>Lainnya</option>
+                                </select>
+                            </label>
+                            <label class="block text-sm font-semibold text-slate-700">
+                                Tanggal
+                                <input type="date" name="date" id="activityDate" required class="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5">
+                            </label>
+                            <label class="block text-sm font-semibold text-slate-700">
+                                Bahan inventaris (opsional)
+                                <select name="itemId" id="itemId" class="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5">
+                                    <option value="">Tidak menggunakan bahan gudang</option>
+                                </select>
+                            </label>
+                            <label id="quantityField" class="hidden text-sm font-semibold text-slate-700">
+                                Jumlah pemakaian
+                                <input type="number" name="quantity" id="quantity" min="0.001" max="999999999" step="0.001" placeholder="Contoh: 2.5" class="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5">
+                                <span id="stockHint" class="mt-1 block text-xs font-normal text-slate-500"></span>
+                            </label>
+                            <label class="block text-sm font-semibold text-slate-700">
+                                Catatan
+                                <textarea name="description" maxlength="1000" rows="3" placeholder="Catatan kondisi atau hasil aktivitas" class="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5"></textarea>
+                            </label>
+                            <p id="activityMessage" class="text-sm text-rose-700" role="alert" aria-live="polite"></p>
+                            <button type="submit" class="w-full rounded-xl bg-emerald-600 px-4 py-3 font-bold text-white hover:bg-emerald-700">Simpan Aktivitas</button>
+                        </form>
+                    </div>
+
+                    <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm xl:col-span-2">
+                        <h3 class="text-lg font-bold text-slate-900">Riwayat Aktivitas</h3>
+                        <p id="historyMessage" class="mt-1 text-sm text-slate-500" role="status" aria-live="polite">Memuat aktivitas…</p>
+                        <div class="mt-4 overflow-x-auto">
+                            <table class="w-full min-w-[680px] text-left text-sm">
+                                <thead class="bg-slate-50 text-xs uppercase text-slate-500">
+                                    <tr>
+                                        <th class="rounded-l-lg p-3">Tanggal</th>
+                                        <th class="p-3">Lahan</th>
+                                        <th class="p-3">Aktivitas</th>
+                                        <th class="p-3">Bahan dipakai</th>
+                                        <th class="rounded-r-lg p-3 text-right">Biaya lahan</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="activityRows" class="divide-y divide-slate-100"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+    <script>
+        const form = document.querySelector('#activityForm');
+        const itemSelect = document.querySelector('#itemId');
+        const quantityField = document.querySelector('#quantityField');
+        const quantityInput = document.querySelector('#quantity');
+        const activityRows = document.querySelector('#activityRows');
+        const rupiah = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 });
+        const dateFormatter = new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' });
+        let inventoryItems = [];
+
+        function todayLocal() {
+            const now = new Date();
+            return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+        }
+
+        function updateUsageFields() {
+            const usesItem = itemSelect.value !== '';
+            quantityField.classList.toggle('hidden', !usesItem);
+            quantityInput.required = usesItem;
+            if (!usesItem) quantityInput.value = '';
+            const item = inventoryItems.find((entry) => String(entry.id) === itemSelect.value);
+            document.querySelector('#stockHint').textContent = item
+                ? `Stok tersedia: ${item.quantity} ${item.unit}`
+                : '';
+            quantityInput.max = item ? item.quantity : '999999999';
+        }
+
+        async function loadOptions() {
+            const [activityResponse, inventoryResponse] = await Promise.all([
+                fetch('/api/farmer/activities'),
+                fetch('/api/farmer/inventory')
+            ]);
+            const activityResult = await activityResponse.json();
+            const inventoryResult = await inventoryResponse.json();
+            if (!activityResponse.ok) throw new Error(activityResult.error || 'Daftar lahan tidak dapat dimuat.');
+            if (!inventoryResponse.ok) throw new Error(inventoryResult.error || 'Daftar inventaris tidak dapat dimuat.');
+
+            const fieldSelect = document.querySelector('#fieldId');
+            const activeFields = activityResult.fields.filter((field) => field.crop_cycle_id);
+            fieldSelect.replaceChildren(new Option(activeFields.length ? 'Pilih lahan dan musim aktif' : 'Tidak ada lahan dengan musim aktif', ''));
+            for (const field of activeFields) {
+                fieldSelect.add(new Option(`${field.name} · ${field.crop_cycle_name}`, String(field.id)));
+            }
+            if (activeFields.length === 0) {
+                document.querySelector('#activityMessage').textContent = 'Mulai musim tanam untuk salah satu lahan sebelum mencatat aktivitas.';
+                form.querySelector('button[type="submit"]').disabled = true;
+            } else {
+                form.querySelector('button[type="submit"]').disabled = false;
+            }
+
+            inventoryItems = inventoryResult.items;
+            itemSelect.replaceChildren(new Option('Tidak menggunakan bahan gudang', ''));
+            for (const item of inventoryItems) {
+                const option = new Option(`${item.name} — stok ${item.quantity} ${item.unit}`, String(item.id));
+                option.disabled = item.quantity <= 0;
+                itemSelect.add(option);
+            }
+            updateUsageFields();
+        }
+
+        async function loadActivities() {
+            const response = await fetch('/api/farmer/activities');
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.error || 'Riwayat aktivitas tidak dapat dimuat.');
+            activityRows.replaceChildren();
+
+            if (result.activities.length === 0) {
+                document.querySelector('#historyMessage').textContent = 'Belum ada aktivitas lahan.';
+                return;
+            }
+            document.querySelector('#historyMessage').textContent = `${result.activities.length} aktivitas tercatat.`;
+
+            for (const activity of result.activities) {
+                const row = document.createElement('tr');
+                const date = document.createElement('td');
+                date.className = 'p-3 whitespace-nowrap text-slate-600';
+                date.textContent = dateFormatter.format(new Date(`${activity.activity_date}T00:00:00.000Z`));
+                const field = document.createElement('td');
+                field.className = 'p-3 font-semibold text-slate-800';
+                field.textContent = activity.field_name;
+                const type = document.createElement('td');
+                type.className = 'p-3';
+                const activityLabel = activity.description
+                    ? `${activity.activity_type} — ${activity.description}`
+                    : activity.activity_type;
+                type.textContent = activity.worker_name
+                    ? `${activityLabel} (dilaporkan oleh ${activity.worker_name})`
+                    : activityLabel;
+                const item = document.createElement('td');
+                item.className = 'p-3 text-slate-600';
+                item.textContent = activity.item_name
+                    ? `${activity.item_name}: ${activity.quantity_milli / 1000} ${activity.item_unit}`
+                    : '—';
+                const cost = document.createElement('td');
+                cost.className = 'p-3 text-right font-semibold text-slate-700';
+                cost.textContent = activity.total_cost_rupiah === null
+                    ? '—'
+                    : rupiah.format(activity.total_cost_rupiah);
+                row.append(date, field, type, item, cost);
+                activityRows.append(row);
+            }
+        }
+
+        itemSelect.addEventListener('change', updateUsageFields);
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const message = document.querySelector('#activityMessage');
+            message.textContent = '';
+            try {
+                const response = await fetch('/api/farmer/activities', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams(new FormData(form))
+                });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.error || 'Aktivitas tidak dapat disimpan.');
+                form.elements.description.value = '';
+                form.elements.quantity.value = '';
+                message.className = 'text-sm text-emerald-700';
+                message.textContent = result.activity.consumedItem
+                    ? `Aktivitas tersimpan; stok berkurang dan biaya ${rupiah.format(result.activity.consumedItem.costRupiah)} dibebankan ke lahan.`
+                    : 'Aktivitas berhasil disimpan.';
+                await Promise.all([loadOptions(), loadActivities()]);
+            } catch (error) {
+                message.className = 'text-sm text-rose-700';
+                message.textContent = error.message;
+            }
+        });
+
+        document.querySelector('#activityDate').value = todayLocal();
+        document.querySelector('#menuToggle').addEventListener('click', () => {
+            document.querySelector('#sidebar').classList.toggle('-translate-x-full');
+            document.querySelector('#sidebarOverlay').classList.toggle('hidden');
+        });
+        document.querySelector('#sidebarOverlay').addEventListener('click', () => {
+            document.querySelector('#sidebar').classList.toggle('-translate-x-full');
+            document.querySelector('#sidebarOverlay').classList.toggle('hidden');
+        });
+
+        loadOptions()
+            .then(loadActivities)
+            .catch((error) => {
+                document.querySelector('#activityMessage').textContent = error.message;
+                document.querySelector('#historyMessage').textContent = 'Gagal memuat data.';
+            });
+    </script>
+</body>
+</html>
