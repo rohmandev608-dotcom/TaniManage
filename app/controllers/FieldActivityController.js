@@ -27,14 +27,14 @@ function createFieldActivityController(database) {
     });
   }
 
-  function list(request, response) {
+  async function list(request, response) {
     View.sendJson(response, 200, {
-      activities: database.listFieldActivitiesForOwner(request.user.id),
-      fields: database.listLandsWithActiveCropCycleForOwner(request.user.id)
+      activities: await database.listFieldActivitiesForOwner(request.user.id),
+      fields: await database.listLandsWithActiveCropCycleForOwner(request.user.id)
     });
   }
 
-  function create(request, response) {
+  async function create(request, response) {
     const fieldId = Number(request.body.fieldId);
     const activityType = typeof request.body.activityType === 'string'
       ? request.body.activityType
@@ -78,7 +78,7 @@ function createFieldActivityController(database) {
     }
 
     try {
-      const activity = database.createFieldActivityWithInventory(request.user.id, {
+      const activity = await database.createFieldActivityWithInventory(request.user.id, {
         fieldId,
         activityType,
         date,

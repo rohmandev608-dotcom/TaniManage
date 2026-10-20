@@ -11,6 +11,7 @@ const { createFieldActivityController } = require('../app/controllers/FieldActiv
 const { createCropCycleController } = require('../app/controllers/CropCycleController');
 const { requireAuth, requireRoles, requireCsrf, requireOwner } = require('../app/middleware/auth');
 const View = require('../app/core/View');
+const supabaseHealth = require('../api/supabase-health');
 
 function registerWebRoutes(router, { database, sessions }) {
   const auth = createAuthController(database, sessions);
@@ -24,6 +25,7 @@ function registerWebRoutes(router, { database, sessions }) {
   const cropCycles = createCropCycleController(database);
 
   router.get('/styles.css', (request, response) => View.sendStylesheet(response));
+  router.get('/api/supabase-health', supabaseHealth);
   router.get('/', HomeController.index);
   router.get('/register', auth.registerPage);
   router.post('/register', requireCsrf, auth.register);
@@ -77,9 +79,9 @@ function registerWebRoutes(router, { database, sessions }) {
   router.get('/api/me', requireAuth, (request, response) => {
     View.sendJson(response, 200, { user: request.user });
   });
-  router.get('/api/farmer/users/:userId', requireRoles('farmer'), requireOwner(), (request, response) => {
+  router.get('/api/farmer/users/:userId', requireRoles('farmer'), requireOwner(), async (request, response) => {
     View.sendJson(response, 200, {
-      user: database.getPublicUserById(request.user.id)
+      user: await database.getPublicUserById(request.user.id)
     });
   });
   router.get('/api/admin/users', requireRoles('admin'), admin.listUsers);

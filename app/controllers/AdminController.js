@@ -3,11 +3,11 @@ const View = require('../core/View');
 const ALLOWED_ROLES = new Set(['farmer', 'worker', 'admin']);
 
 function createAdminController(database) {
-  function listUsers(request, response) {
-    View.sendJson(response, 200, { users: database.listPublicUsers() });
+  async function listUsers(request, response) {
+    View.sendJson(response, 200, { users: await database.listPublicUsers() });
   }
 
-  function changeRole(request, response) {
+  async function changeRole(request, response) {
     const userId = Number(request.body.userId);
     const role = request.body.role;
     if (!Number.isSafeInteger(userId) || userId < 1 || !ALLOWED_ROLES.has(role)) {
@@ -16,19 +16,19 @@ function createAdminController(database) {
       return;
     }
 
-    const target = database.getPublicUserById(userId);
+    const target = await database.getPublicUserById(userId);
     if (!target) {
       response.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
       response.end('Pengguna tidak ditemukan.');
       return;
     }
-    if (target.role === 'admin' && role !== 'admin' && database.countUsersByRole('admin') <= 1) {
+    if (target.role === 'admin' && role !== 'admin' && await database.countUsersByRole('admin') <= 1) {
       response.writeHead(409, { 'Content-Type': 'text/plain; charset=utf-8' });
       response.end('Peran admin terakhir tidak dapat dihapus.');
       return;
     }
 
-    database.setUserRole(userId, role);
+    await database.setUserRole(userId, role);
     View.redirect(response, '/admin');
   }
 

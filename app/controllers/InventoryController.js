@@ -34,9 +34,9 @@ function createInventoryController(database) {
     });
   }
 
-  function list(request, response) {
+  async function list(request, response) {
     View.sendJson(response, 200, {
-      items: database.listInventoryItemsForOwner(request.user.id).map((item) => ({
+      items: (await database.listInventoryItemsForOwner(request.user.id)).map((item) => ({
         ...item,
         quantity: item.quantity_milli / 1000,
         averageUnitCostRupiah: item.average_unit_cost_micros / 1_000_000
@@ -44,7 +44,7 @@ function createInventoryController(database) {
     });
   }
 
-  function purchase(request, response) {
+  async function purchase(request, response) {
     const itemIdValue = typeof request.body.itemId === 'string'
       ? request.body.itemId.trim()
       : '';
@@ -84,7 +84,7 @@ function createInventoryController(database) {
     }
 
     try {
-      const item = database.purchaseInventory(request.user.id, {
+      const item = await database.purchaseInventory(request.user.id, {
         itemId,
         itemName,
         unit,
@@ -109,7 +109,9 @@ function createInventoryController(database) {
         View.sendJson(response, 400, { error: error.message });
         return;
       }
-      if (error.code === 'ERR_SQLITE_ERROR' && String(error.message).includes('UNIQUE constraint failed: inventory_items')) {
+      if ((error.code === 'ERR_SQLITE_ERROR'
+        && String(error.message).includes('UNIQUE constraint failed: inventory_items'))
+        || error.code === '23505' || error.code === 'ER_DUP_ENTRY') {
         View.sendJson(response, 409, { error: 'Bahan dengan nama dan satuan tersebut sudah ada. Pilih bahan itu untuk menambah stok.' });
         return;
       }

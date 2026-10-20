@@ -1,17 +1,17 @@
 const { safeEqual } = require('../core/Security');
 
 function loadSession(sessions, database) {
-  return (request, response, next) => {
-    sessions.load(request);
+  return async (request, response, next) => {
+    await sessions.load(request);
     request.user = request.session && request.session.userId !== null
-      ? database.getPublicUserById(request.session.userId)
+      ? await database.getPublicUserById(request.session.userId)
       : null;
 
     if (request.session && request.session.userId !== null && !request.user) {
-      sessions.destroy(request, response);
+      await sessions.destroy(request, response);
     }
 
-    return next();
+    return await next();
   };
 }
 

@@ -9,16 +9,16 @@ function renderError(response, template, error, values = {}) {
 }
 
 function createAuthController(database, sessions) {
-  function registerPage(request, response) {
+  async function registerPage(request, response) {
     if (request.user) {
       View.redirect(response, '/dashboard');
       return;
     }
-    const session = sessions.ensure(request, response);
+    const session = await sessions.ensure(request, response);
     View.render(response, 'auth/register.html', { csrfToken: session.csrfToken });
   }
 
-  function register(request, response) {
+  async function register(request, response) {
     const name = typeof request.body.name === 'string' ? request.body.name.trim() : '';
     const email = typeof request.body.email === 'string'
       ? request.body.email.trim().toLowerCase()
@@ -60,16 +60,18 @@ function createAuthController(database, sessions) {
     }
 
     try {
-      const user = database.createUser({
+      const user = await database.createUser({
         name,
         email,
         passwordHash: Security.hashPassword(password),
         role
       });
-      sessions.regenerate(request, response, user.id);
+      await sessions.regenerate(request, response, user.id);
       View.redirect(response, '/dashboard');
     } catch (error) {
-      if (error.code !== 'ERR_SQLITE_ERROR' || !String(error.message).includes('UNIQUE constraint failed: users.email')) {
+      if (!((error.code === 'ERR_SQLITE_ERROR'
+        && String(error.message).includes('UNIQUE constraint failed: users.email'))
+        || error.code === '23505' || error.code === 'ER_DUP_ENTRY')) {
         throw error;
       }
       renderError(response, 'auth/register.html', 'Email tersebut sudah terdaftar.', {
@@ -80,21 +82,21 @@ function createAuthController(database, sessions) {
     }
   }
 
-  function loginPage(request, response) {
+  async function loginPage(request, response) {
     if (request.user) {
       View.redirect(response, '/dashboard');
       return;
     }
-    const session = sessions.ensure(request, response);
+    const session = await sessions.ensure(request, response);
     View.render(response, 'auth/login.html', { csrfToken: session.csrfToken });
   }
 
-  function login(request, response) {
+  async function login(request, response) {
     const email = typeof request.body.email === 'string'
       ? request.body.email.trim().toLowerCase()
       : '';
     const password = typeof request.body.password === 'string' ? request.body.password : '';
-    const user = email.length <= 254 ? database.findUserByEmail(email) : null;
+    const user = email.length <= 254 ? await database.findUserByEmail(email) : null;
     const passwordValid = Security.verifyPassword(
       password.slice(0, 128),
       user ? user.password_hash : DUMMY_PASSWORD_HASH
@@ -108,12 +110,12 @@ function createAuthController(database, sessions) {
       return;
     }
 
-    sessions.regenerate(request, response, user.id);
+    await sessions.regenerate(request, response, user.id);
     View.redirect(response, '/dashboard');
   }
 
-  function logout(request, response) {
-    sessions.destroy(request, response);
+  async function logout(request, response) {
+    await sessions.destroy(request, response);
     View.redirect(response, '/');
   }
 

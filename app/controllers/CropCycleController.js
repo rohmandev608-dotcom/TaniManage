@@ -21,14 +21,14 @@ function createCropCycleController(database) {
     });
   }
 
-  function list(request, response) {
+  async function list(request, response) {
     View.sendJson(response, 200, {
-      cycles: database.listCropCyclesForOwner(request.user.id),
-      fields: database.listLandsWithActiveCropCycleForOwner(request.user.id)
+      cycles: await database.listCropCyclesForOwner(request.user.id),
+      fields: await database.listLandsWithActiveCropCycleForOwner(request.user.id)
     });
   }
 
-  function create(request, response) {
+  async function create(request, response) {
     const fieldId = Number(request.body.fieldId);
     const commodityName = typeof request.body.commodityName === 'string'
       ? request.body.commodityName.trim()
@@ -61,7 +61,7 @@ function createCropCycleController(database) {
     }
 
     try {
-      const cycle = database.createCropCycle(request.user.id, {
+      const cycle = await database.createCropCycle(request.user.id, {
         fieldId,
         commodityName,
         variety,
@@ -82,10 +82,10 @@ function createCropCycleController(database) {
     }
   }
 
-  function report(request, response) {
+  async function report(request, response) {
     const cycleId = Number(request.params.id);
     const result = Number.isSafeInteger(cycleId) && cycleId > 0
-      ? database.getCropCycleReportForOwner(request.user.id, cycleId)
+      ? await database.getCropCycleReportForOwner(request.user.id, cycleId)
       : null;
     if (!result) {
       View.sendJson(response, 404, { error: 'Musim tanam tidak ditemukan.' });
@@ -94,7 +94,7 @@ function createCropCycleController(database) {
     View.sendJson(response, 200, result);
   }
 
-  function complete(request, response) {
+  async function complete(request, response) {
     const cycleId = Number(request.params.id);
     if (!Number.isSafeInteger(cycleId) || cycleId < 1) {
       View.sendJson(response, 404, { error: 'Musim tanam tidak ditemukan.' });
@@ -103,7 +103,7 @@ function createCropCycleController(database) {
 
     try {
       View.sendJson(response, 200, {
-        cycle: database.completeCropCycle(request.user.id, cycleId)
+        cycle: await database.completeCropCycle(request.user.id, cycleId)
       });
     } catch (error) {
       if (error.code === 'CROP_CYCLE_NOT_FOUND') {

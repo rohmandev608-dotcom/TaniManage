@@ -99,16 +99,16 @@ function createLandController(database) {
     });
   }
 
-  function list(request, response) {
+  async function list(request, response) {
     View.sendJson(response, 200, {
-      lands: database.listLandsForOwner(request.user.id)
+      lands: await database.listLandsForOwner(request.user.id)
     });
   }
 
-  function show(request, response) {
+  async function show(request, response) {
     const landId = Number(request.params.id);
     const land = Number.isSafeInteger(landId) && landId > 0
-      ? database.getLandForOwner(request.user.id, landId)
+      ? await database.getLandForOwner(request.user.id, landId)
       : null;
 
     if (!land) {
@@ -123,7 +123,7 @@ function createLandController(database) {
     View.render(response, 'dashboard/tambah-lahan.html', viewData(request));
   }
 
-  function create(request, response) {
+  async function create(request, response) {
     const values = getFormValues(request.body);
     const error = validateLand(values);
     if (error) {
@@ -131,14 +131,14 @@ function createLandController(database) {
       return;
     }
 
-    database.createLand(request.user.id, {
+    await database.createLand(request.user.id, {
       ...values,
       areaHectares: Number(values.areaHectares)
     });
     View.redirect(response, '/farmer/lands');
   }
 
-  function editPage(request, response) {
+  async function editPage(request, response) {
     const landId = Number(request.params.id);
     if (!Number.isSafeInteger(landId) || landId < 1) {
       response.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
@@ -146,7 +146,7 @@ function createLandController(database) {
       return;
     }
 
-    const land = database.getLandForOwner(request.user.id, landId);
+    const land = await database.getLandForOwner(request.user.id, landId);
     if (!land) {
       response.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
       response.end('Lahan tidak ditemukan.');
@@ -159,7 +159,7 @@ function createLandController(database) {
     }, '', true));
   }
 
-  function update(request, response) {
+  async function update(request, response) {
     const landId = Number(request.params.id);
     if (!Number.isSafeInteger(landId) || landId < 1) {
       response.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
@@ -167,7 +167,7 @@ function createLandController(database) {
       return;
     }
 
-    const existing = database.getLandForOwner(request.user.id, landId);
+    const existing = await database.getLandForOwner(request.user.id, landId);
     if (!existing) {
       response.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
       response.end('Lahan tidak ditemukan.');
@@ -182,23 +182,23 @@ function createLandController(database) {
       return;
     }
 
-    database.updateLandForOwner(request.user.id, landId, {
+    await database.updateLandForOwner(request.user.id, landId, {
       ...values,
       areaHectares: Number(values.areaHectares)
     });
     View.redirect(response, '/farmer/lands');
   }
 
-  function remove(request, response) {
+  async function remove(request, response) {
     const landId = Number(request.params.id);
     if (!Number.isSafeInteger(landId) || landId < 1
-      || !database.getLandForOwner(request.user.id, landId)) {
+      || !await database.getLandForOwner(request.user.id, landId)) {
       response.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
       response.end('Lahan tidak ditemukan.');
       return;
     }
     try {
-      database.deleteLandForOwner(request.user.id, landId);
+      await database.deleteLandForOwner(request.user.id, landId);
     } catch (error) {
       if (error.code === 'LAND_HAS_CROP_CYCLES') {
         response.writeHead(409, { 'Content-Type': 'text/plain; charset=utf-8' });

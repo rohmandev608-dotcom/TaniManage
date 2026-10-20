@@ -37,7 +37,7 @@ function createFinanceController(database) {
     });
   }
 
-  function list(request, response) {
+  async function list(request, response) {
     const searchParams = new URL(request.url, 'http://localhost').searchParams;
     const rawFieldId = searchParams.get('fieldId');
     const rawCropCycleId = searchParams.get('cropCycleId');
@@ -50,7 +50,7 @@ function createFinanceController(database) {
         View.sendJson(response, 400, { error: 'Filter lahan tidak valid.' });
         return;
       }
-      if (!database.getLandForOwner(request.user.id, fieldId)) {
+      if (!await database.getLandForOwner(request.user.id, fieldId)) {
         View.sendJson(response, 404, { error: 'Lahan tidak ditemukan.' });
         return;
       }
@@ -64,7 +64,7 @@ function createFinanceController(database) {
         View.sendJson(response, 400, { error: 'Filter musim tanam tidak valid.' });
         return;
       }
-      const cycle = database.getCropCycleForOwner(request.user.id, cropCycleId);
+      const cycle = await database.getCropCycleForOwner(request.user.id, cropCycleId);
       if (!cycle) {
         View.sendJson(response, 404, { error: 'Musim tanam tidak ditemukan.' });
         return;
@@ -76,14 +76,14 @@ function createFinanceController(database) {
     }
 
     View.sendJson(response, 200, {
-      fields: database.listLandsWithActiveCropCycleForOwner(request.user.id),
-      cropCycles: database.listCropCyclesForOwner(request.user.id),
-      summary: database.getFinancialSummaryForOwner(request.user.id, fieldId, cropCycleId),
-      transactions: database.listFinancialTransactionsForOwner(request.user.id, fieldId, cropCycleId)
+      fields: await database.listLandsWithActiveCropCycleForOwner(request.user.id),
+      cropCycles: await database.listCropCyclesForOwner(request.user.id),
+      summary: await database.getFinancialSummaryForOwner(request.user.id, fieldId, cropCycleId),
+      transactions: await database.listFinancialTransactionsForOwner(request.user.id, fieldId, cropCycleId)
     });
   }
 
-  function create(request, response) {
+  async function create(request, response) {
     const type = request.body.type;
     const category = typeof request.body.category === 'string' ? request.body.category : '';
     const date = typeof request.body.date === 'string' ? request.body.date : '';
@@ -126,14 +126,14 @@ function createFinanceController(database) {
         View.sendJson(response, 400, { error: 'Lahan tidak valid.' });
         return;
       }
-      if (!database.getLandForOwner(request.user.id, fieldId)) {
+      if (!await database.getLandForOwner(request.user.id, fieldId)) {
         View.sendJson(response, 404, { error: 'Lahan tidak ditemukan.' });
         return;
       }
     }
 
     try {
-      const transaction = database.createFinancialTransaction(request.user.id, {
+      const transaction = await database.createFinancialTransaction(request.user.id, {
         fieldId,
         type,
         category,

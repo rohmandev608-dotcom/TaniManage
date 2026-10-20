@@ -14,20 +14,20 @@ function createOwnerWorkerController(database) {
     });
   }
 
-  function list(request, response) {
-    const inviteCode = database.ensureOwnerInvite(
+  async function list(request, response) {
+    const inviteCode = await database.ensureOwnerInvite(
       request.user.id,
       crypto.randomBytes(32).toString('base64url')
     );
     const joinUrl = `/worker/join?invite=${encodeURIComponent(inviteCode)}`;
     View.sendJson(response, 200, {
-      ...database.listOwnerWorkers(request.user.id),
-      fields: database.listOwnerFieldsForWorkerAssignment(request.user.id),
+      ...(await database.listOwnerWorkers(request.user.id)),
+      fields: await database.listOwnerFieldsForWorkerAssignment(request.user.id),
       invite: { joinUrl }
     });
   }
 
-  function assign(request, response) {
+  async function assign(request, response) {
     const workerId = parsePositiveInteger(request.body.workerId);
     const fieldId = parsePositiveInteger(request.body.fieldId);
     const cropCycleId = parsePositiveInteger(request.body.cropCycleId);
@@ -37,7 +37,7 @@ function createOwnerWorkerController(database) {
     }
 
     try {
-      const created = database.assignWorkerToCropCycle(
+      const created = await database.assignWorkerToCropCycle(
         request.user.id,
         workerId,
         fieldId,
@@ -55,13 +55,13 @@ function createOwnerWorkerController(database) {
     }
   }
 
-  function remove(request, response) {
+  async function remove(request, response) {
     const workerId = parsePositiveInteger(request.params.workerId);
     if (!workerId) {
       View.sendJson(response, 400, { error: 'ID buruh tidak valid.' });
       return;
     }
-    const removed = database.removeWorkerFromOwner(request.user.id, workerId);
+    const removed = await database.removeWorkerFromOwner(request.user.id, workerId);
     if (!removed) {
       View.sendJson(response, 404, { error: 'Buruh tidak ditemukan dalam tim owner ini.' });
       return;

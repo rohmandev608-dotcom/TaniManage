@@ -7,7 +7,7 @@ const Security = require('./app/core/Security');
 const { loadSession } = require('./app/middleware/auth');
 const { parseFormBody } = require('./app/middleware/formBody');
 
-function bootstrapAdmin(database, environment = process.env) {
+async function bootstrapAdmin(database, environment = process.env) {
   const values = [
     environment.BOOTSTRAP_ADMIN_NAME,
     environment.BOOTSTRAP_ADMIN_EMAIL,
@@ -21,7 +21,7 @@ function bootstrapAdmin(database, environment = process.env) {
   if (configuredCount !== values.length) {
     throw new Error('Konfigurasi bootstrap admin harus mengisi NAME, EMAIL, dan PASSWORD.');
   }
-  if (database.getUserCount() !== 0) {
+  if (await database.getUserCount() !== 0) {
     console.info('Bootstrap admin dilewati karena database sudah berisi pengguna.');
     return;
   }
@@ -34,7 +34,7 @@ function bootstrapAdmin(database, environment = process.env) {
     throw new Error('Nama, email, atau password bootstrap admin tidak valid.');
   }
 
-  database.createUser({
+  await database.createUser({
     name: name.trim(),
     email,
     passwordHash: Security.hashPassword(password),
@@ -45,7 +45,7 @@ function bootstrapAdmin(database, environment = process.env) {
 
 function createServer(options = {}) {
   const database = new Database(options.databasePath);
-  bootstrapAdmin(database, options.bootstrap);
+  const ready = database.ready.then(() => bootstrapAdmin(database, options.bootstrap));
   const sessions = new Sessions(database);
   const router = new Router();
 
@@ -53,8 +53,11 @@ function createServer(options = {}) {
   router.use(loadSession(sessions, database));
   registerWebRoutes(router, { database, sessions });
 
-  const server = http.createServer((request, response) => {
-    router.handle(request, response).catch((error) => {
+  const handleRequest = async (request, response) => {
+    try {
+      await ready;
+      await router.handle(request, response);
+    } catch (error) {
       console.error('Gagal menangani request:', error);
       if (!response.headersSent) {
         response.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' });
@@ -62,18 +65,49 @@ function createServer(options = {}) {
       if (!response.writableEnded) {
         response.end('Terjadi kesalahan pada server.');
       }
-    });
-  });
+    }
+  };
+  const server = http.createServer(handleRequest);
 
-  server.on('close', () => database.close());
+  server.on('close', () => {
+    database.close().catch((error) => console.error('Gagal menutup database:', error));
+  });
+  server.ready = ready;
+  server.database = database;
+  server.handleRequest = handleRequest;
   return server;
 }
 
 if (require.main === module) {
   const server = createServer();
   const port = Number(process.env.PORT) || 3000;
-  server.listen(port, () => {
-    console.log(`Web Petani berjalan di http://localhost:${port}`);
+  server.ready.then(() => {
+    server.listen(port, () => {
+      console.log(`Web Petani berjalan di http://localhost:${port}`);
+    });
+  }).catch(async (error) => {
+    console.error('Gagal menyiapkan koneksi database:', error.message);
+    if (error.code === 'ENOTFOUND' || error.code === 'EAI_AGAIN') {
+      console.error(
+        'Periksa host pada DATABASE_URL di Supabase Dashboard > Project Settings > Database. '
+        + 'Salin ulang connection string, atau coba connection pooler jika DNS/network tidak mendukung direct connection.'
+      );
+    } else if (error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT') {
+      console.error(
+        'Periksa status proyek Supabase, port database, firewall, dan connection string.'
+      );
+    } else if (error.code === 'SELF_SIGNED_CERT_IN_CHAIN'
+      || error.code === 'UNABLE_TO_VERIFY_LEAF_SIGNATURE') {
+      console.error(
+        'TLS certificate tidak dipercaya. Jika jaringan memakai proxy inspeksi TLS, minta CA certificate resmi dari administrator jaringan, simpan sebagai file PEM, lalu set DATABASE_SSL_CA_FILE ke path file tersebut. Jangan menonaktifkan verifikasi sertifikat.'
+      );
+    }
+    try {
+      await server.database.close();
+    } catch (closeError) {
+      console.error('Gagal menutup koneksi database:', closeError.message);
+    }
+    process.exitCode = 1;
   });
 }
 

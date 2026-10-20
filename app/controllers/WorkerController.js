@@ -3,15 +3,15 @@ const { parseQuantity, isValidDate } = require('./InventoryController');
 const { ACTIVITY_TYPES } = require('./FieldActivityController');
 
 function createWorkerController(database) {
-  function listAssignedResources(request, response) {
+  async function listAssignedResources(request, response) {
     View.sendJson(response, 200, {
-      assignments: database.listWorkerAssignments(request.user.id),
-      inventoryItems: database.listWorkerInventoryOptions(request.user.id),
-      activities: database.listWorkerFieldActivities(request.user.id)
+      assignments: await database.listWorkerAssignments(request.user.id),
+      inventoryItems: await database.listWorkerInventoryOptions(request.user.id),
+      activities: await database.listWorkerFieldActivities(request.user.id)
     });
   }
 
-  function joinOwner(request, response) {
+  async function joinOwner(request, response) {
     const inviteCode = typeof request.body.inviteCode === 'string'
       ? request.body.inviteCode.trim()
       : '';
@@ -22,7 +22,7 @@ function createWorkerController(database) {
 
     try {
       View.sendJson(response, 200, {
-        membership: database.joinWorkerWithInvite(request.user.id, inviteCode)
+        membership: await database.joinWorkerWithInvite(request.user.id, inviteCode)
       });
     } catch (error) {
       if (error.code === 'INVALID_WORKER_INVITE') {
@@ -33,7 +33,7 @@ function createWorkerController(database) {
     }
   }
 
-  function createFieldActivity(request, response) {
+  async function createFieldActivity(request, response) {
     const assignmentId = Number(request.body.assignmentId);
     const activityType = typeof request.body.activityType === 'string'
       ? request.body.activityType
@@ -80,7 +80,7 @@ function createWorkerController(database) {
     }
 
     try {
-      const activity = database.createFieldActivityWithInventory(
+      const activity = await database.createFieldActivityWithInventory(
         null,
         {
           assignmentId,
@@ -122,13 +122,13 @@ function createWorkerController(database) {
     }
   }
 
-  function listActivities(request, response) {
+  async function listActivities(request, response) {
     View.sendJson(response, 200, {
-      activities: database.listWorkerActivitiesForUser(request.user.id)
+      activities: await database.listWorkerActivitiesForUser(request.user.id)
     });
   }
 
-  function createActivity(request, response) {
+  async function createActivity(request, response) {
     const activity = typeof request.body.activity === 'string'
       ? request.body.activity.trim()
       : '';
@@ -149,7 +149,7 @@ function createWorkerController(database) {
       return;
     }
 
-    const savedActivity = database.createWorkerActivity(
+    const savedActivity = await database.createWorkerActivity(
       request.user.id,
       activityDate,
       activity

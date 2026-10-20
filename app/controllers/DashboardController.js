@@ -7,8 +7,8 @@ function dashboard(request, response) {
   View.redirect(response, `/${request.user.role}`);
 }
 
-function farmer(request, response, database) {
-  const dashboard = database.getFarmerDashboardForOwner(request.user.id);
+async function farmer(request, response, database) {
+  const dashboard = await database.getFarmerDashboardForOwner(request.user.id);
   View.render(response, 'dashboard/farmer.html', {
     name: request.user.name,
     csrfToken: request.session.csrfToken,
@@ -28,8 +28,8 @@ function farmer(request, response, database) {
   });
 }
 
-function farmerData(request, response, database) {
-  View.sendJson(response, 200, database.getFarmerDashboardForOwner(request.user.id));
+async function farmerData(request, response, database) {
+  View.sendJson(response, 200, await database.getFarmerDashboardForOwner(request.user.id));
 }
 
 function worker(request, response) {

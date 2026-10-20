@@ -1,6 +1,6 @@
 # TaniManage — autentikasi dan RBAC
 
-Aplikasi ini menggunakan Node.js native (tanpa framework/dependensi eksternal) dan SQLite bawaan Node.js. Jalankan dengan Node.js 22.13+ atau versi lebih baru:
+Aplikasi ini menggunakan Node.js native dan mendukung SQLite untuk lokal, PostgreSQL (termasuk Supabase), MySQL, dan MariaDB. Pilih database lewat `DATABASE_URL`; tanpa URL aplikasi memakai SQLite lokal. Jalankan dengan Node.js 22.13+ atau versi lebih baru:
 
 ```sh
 npm start
@@ -75,8 +75,26 @@ Musim tanam merupakan induk laporan aktivitas dan keuangan per periode budidaya:
 
 Database memakai prepared statements; input dibatasi dan divalidasi server-side; nilai tampilan HTML di-escape. Semua POST memakai token CSRF. Cookie ditandai Secure otomatis jika `NODE_ENV=production`.
 
+## Konfigurasi environment
+
+Jalankan `npm start` atau `npm run dev`; keduanya memuat `.env`, lalu `.env.local` jika tersedia. `.env` lokal berisi `PORT=3000` dan diabaikan Git. `.env.example` mendokumentasikan opsi konfigurasi tanpa menyimpan kredensial.
+
+Untuk mengambil variabel dari proyek Vercel yang sudah ditautkan, gunakan `vercel env pull .env.local`. File `.env.local` diabaikan Git. Variabel bootstrap admin (`BOOTSTRAP_ADMIN_NAME`, `BOOTSTRAP_ADMIN_EMAIL`, dan `BOOTSTRAP_ADMIN_PASSWORD`) bersifat opsional, harus diisi bersama-sama, dan sebaiknya dihapus setelah admin pertama dibuat.
+
+### Supabase dan Vercel
+
+Koneksi database dipilih melalui `DATABASE_URL`. Biarkan kosong untuk SQLite lokal, atau isi `sqlite:./data/fmis.sqlite`, URL PostgreSQL, MySQL, maupun MariaDB. Supabase menggunakan PostgreSQL: ambil connection string dari **Supabase Dashboard -> Project Settings -> Database** dan simpan sebagai `DATABASE_URL` di `.env.local` lokal atau di **Vercel Dashboard -> Project -> Settings -> Environment Variables**. Gunakan TLS untuk koneksi production dan jangan commit URL atau password database.
+
+Saat pertama kali aplikasi tersambung ke database SQL eksternal, backend menyiapkan tabel serta index dari `database/schema.sql`. Gunakan akun database yang memiliki izin membuat tabel/index. `DATABASE_POOL_MAX` mengatur batas koneksi pool; default-nya 5. Untuk Supabase, gunakan connection string PostgreSQL yang sesuai untuk aplikasi serverless.
+
+Jika startup menampilkan `ENOTFOUND`, DNS tidak dapat menemukan host pada `DATABASE_URL`. Salin ulang connection string dari **Supabase Dashboard -> Project Settings -> Database** tanpa mengubah host. Jika direct connection tidak dapat diakses dari jaringan Anda, gunakan connection string **Session pooler** yang tersedia di dashboard. Aplikasi menunggu inisialisasi skema database berhasil sebelum membuka port lokal.
+
+Jika muncul `self-signed certificate in certificate chain`, TLS tersambung tetapi CA sertifikat tidak dipercaya Node.js—hal ini dapat terjadi jika jaringan memakai proxy inspeksi TLS. Jika penyedia database memberikan CA PEM, set isi sertifikatnya di `DATABASE_SSL_CA_CERT` (gunakan `DATABASE_SSL_CA_FILE` untuk path file lokal). Untuk Vercel, tambahkan `DATABASE_SSL_CA_CERT` di **Project -> Settings -> Environment Variables** dan tempel isi sertifikat PEM lengkap. Verifikasi sertifikat tetap aktif; jangan mengatasinya dengan mematikan TLS atau verifikasi sertifikat. Jangan commit file CA privat atau rahasia.
+
+Endpoint `/api/supabase-health` memeriksa REST API Supabase menggunakan `SUPABASE_URL` dan `SUPABASE_SERVICE_ROLE_KEY`; kedua variabel ini opsional dan terpisah dari koneksi database. Service-role key adalah rahasia server: jangan beri awalan `NEXT_PUBLIC_`, jangan masukkan ke kode browser, dan jangan commit nilainya. Deployment Vercel wajib memiliki `DATABASE_URL`; SQLite lokal tidak digunakan untuk penyimpanan deployment.
+
 ## Catatan deployment
 
-Session server-side tersimpan di SQLite dan kadaluarsa setelah 8 jam. Untuk aplikasi multi-instance, gunakan session store bersama dan database terkelola dengan backup serta TLS. Jalankan di belakang HTTPS, set `NODE_ENV=production`, dan jangan mengekspos kredensial bootstrap.
+Session server-side tersimpan di database terpilih dan kadaluarsa setelah 8 jam. Untuk aplikasi multi-instance, gunakan database terkelola dengan backup serta TLS. Jalankan di belakang HTTPS, set `NODE_ENV=production`, dan jangan mengekspos kredensial bootstrap.
 #   T a n i M a n a g e  
  

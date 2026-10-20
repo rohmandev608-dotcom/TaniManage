@@ -7,8 +7,12 @@
     "node": ">=22.13.0"
   },
   "scripts": {
-    "start": "node server.js",
-    "dev": "node --watch server.js",
+    "start": "node --env-file-if-exists=.env --env-file-if-exists=.env.local server.js",
+    "dev": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --watch server.js",
     "test": "node --test"
+  },
+  "dependencies": {
+    "mysql2": "^3.24.6",
+    "pg": "^8.23.1"
   }
 }

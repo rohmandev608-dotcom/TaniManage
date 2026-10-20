@@ -15,16 +15,16 @@ class Sessions {
     this.database = database;
   }
 
-  load(request) {
+  async load(request) {
     const token = readCookie(request);
     if (!token || !/^[A-Za-z0-9_-]{43}$/.test(token)) {
       request.session = null;
       return;
     }
 
-    const session = this.database.findSession(hashToken(token));
+    const session = await this.database.findSession(hashToken(token));
     if (!session || session.expires_at <= Date.now()) {
-      this.database.deleteSession(hashToken(token));
+      await this.database.deleteSession(hashToken(token));
       request.session = null;
       return;
     }
@@ -36,7 +36,7 @@ class Sessions {
     };
   }
 
-  ensure(request, response, userId = null) {
+  async ensure(request, response, userId = null) {
     if (request.session) {
       return request.session;
     }
@@ -47,24 +47,24 @@ class Sessions {
       csrfToken: newToken(),
       tokenHash: hashToken(token)
     };
-    this.database.createSession(session.tokenHash, userId, session.csrfToken,
+    await this.database.createSession(session.tokenHash, userId, session.csrfToken,
       Date.now() + SESSION_TTL_SECONDS * 1000);
     this.setCookie(response, token);
     request.session = session;
     return session;
   }
 
-  regenerate(request, response, userId) {
+  async regenerate(request, response, userId) {
     if (request.session) {
-      this.database.deleteSession(request.session.tokenHash);
+      await this.database.deleteSession(request.session.tokenHash);
     }
     request.session = null;
-    return this.ensure(request, response, userId);
+    return await this.ensure(request, response, userId);
   }
 
-  destroy(request, response) {
+  async destroy(request, response) {
     if (request.session) {
-      this.database.deleteSession(request.session.tokenHash);
+      await this.database.deleteSession(request.session.tokenHash);
     }
     request.session = null;
     const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
