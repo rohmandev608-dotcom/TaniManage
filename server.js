@@ -78,45 +78,6 @@ function createServer(options = {}) {
   return server;
 }
 
-let deploymentServer;
-let deploymentStartupError;
-
-async function deploymentHandler(request, response) {
-  const usesPersistentDatabase = /^(?:postgres(?:ql)?|mysql|mariadb):\/\//i
-    .test(process.env.DATABASE_URL || '');
-  if (!usesPersistentDatabase) {
-    response.statusCode = 503;
-    response.setHeader('Content-Type', 'text/plain; charset=utf-8');
-    response.end('Konfigurasikan DATABASE_URL ke PostgreSQL, MySQL, atau MariaDB untuk deployment.');
-    return;
-  }
-
-  if (!deploymentServer && !deploymentStartupError) {
-    try {
-      deploymentServer = createServer();
-    } catch (error) {
-      deploymentStartupError = error;
-    }
-  }
-  if (!deploymentServer) {
-    console.error('Gagal menginisialisasi database:', deploymentStartupError.message);
-    response.statusCode = 503;
-    response.setHeader('Content-Type', 'text/plain; charset=utf-8');
-    response.end('Database belum siap.');
-    return;
-  }
-
-  try {
-    await deploymentServer.ready;
-    await deploymentServer.handleRequest(request, response);
-  } catch (error) {
-    console.error('Gagal menginisialisasi database deployment:', error);
-    response.statusCode = 503;
-    response.setHeader('Content-Type', 'text/plain; charset=utf-8');
-    response.end('Database belum siap.');
-  }
-}
-
 if (require.main === module) {
   const server = createServer();
   const port = Number(process.env.PORT) || 3000;
@@ -150,4 +111,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = Object.assign(deploymentHandler, { createServer, bootstrapAdmin });
+module.exports = { createServer, bootstrapAdmin };

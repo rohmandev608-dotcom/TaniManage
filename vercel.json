@@ -1,13 +1,17 @@
 {
   "rewrites": [
     {
-      "source": "/(.*)",
-      "destination": "/api/index"
+      "source": "/:appPath*",
+      "destination": "/api/index?__app_path=/:appPath*"
     }
   ],
   "functions": {
     "api/index.js": {
-      "includeFiles": "app/views/**/*"
+      "includeFiles": [
+        "app/views/**/*",
+        "database/schema.sql",
+        "certs/prod-ca-2021.crt"
+      ]
     }
   }
 }
