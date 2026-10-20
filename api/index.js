@@ -12,6 +12,7 @@ function getStartupErrorMessage(error) {
   return `Database belum siap${code}. Periksa Runtime Logs pada deployment Vercel.`;
 }
 
+
 function restoreRewrittenPath(request) {
   const requestUrl = new URL(request.url || '/', 'http://localhost');
   const appPath = requestUrl.searchParams.get('__app_path');
