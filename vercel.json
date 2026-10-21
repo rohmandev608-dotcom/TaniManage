@@ -7,11 +7,7 @@
   ],
   "functions": {
     "api/index.js": {
-      "includeFiles": [
-        "app/views/**/*",
-        "database/schema.sql",
-        "certs/prod-ca-2021.crt"
-      ]
+      "includeFiles": "{app/views/**/*,database/schema.sql,certs/prod-ca-2021.crt}"
     }
   }
 }
