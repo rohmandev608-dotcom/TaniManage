@@ -1,17 +1,4 @@
-const { createServer } = require('../server');
-
-let server;
-
-function getStartupErrorMessage(error) {
-  if (error.code === 'ENOENT' && process.env.DATABASE_SSL_CA_FILE) {
-    return 'CA certificate file tidak ditemukan di deployment. Set DATABASE_SSL_CA_CERT di Vercel atau sertakan file CA dalam deployment.';
-  }
-  const code = typeof error.code === 'string' && /^[A-Z0-9_]+$/.test(error.code)
-    ? ` (${error.code})`
-    : '';
-  return `Database belum siap${code}. Periksa Runtime Logs pada deployment Vercel.`;
-}
-
+const app = require('../index');
 
 function restoreRewrittenPath(request) {
   const requestUrl = new URL(request.url || '/', 'http://localhost');
@@ -26,10 +13,10 @@ function restoreRewrittenPath(request) {
   request.url = `${appPath}${requestUrl.search}`;
 }
 
-module.exports = async function handler(request, response) {
+function handler(request, response) {
   try {
     restoreRewrittenPath(request);
-  } catch (error) {
+  } catch {
     response.statusCode = 400;
     response.setHeader('Content-Type', 'text/plain; charset=utf-8');
     response.end('Request tidak valid.');
@@ -45,27 +32,8 @@ module.exports = async function handler(request, response) {
     return;
   }
 
-  if (!server) {
-    try {
-      server = createServer();
-    } catch (error) {
-      console.error('Gagal menginisialisasi database:', error);
-      response.statusCode = 503;
-      response.setHeader('Content-Type', 'text/plain; charset=utf-8');
-      response.end(getStartupErrorMessage(error));
-      return;
-    }
-  }
+  return app(request, response);
+}
 
-  try {
-    await server.ready;
-    await server.handleRequest(request, response);
-  } catch (error) {
-    console.error('Gagal menginisialisasi database deployment:', error);
-    response.statusCode = 503;
-    response.setHeader('Content-Type', 'text/plain; charset=utf-8');
-    response.end(getStartupErrorMessage(error));
-  }
-};
-
+module.exports = handler;
 module.exports.restoreRewrittenPath = restoreRewrittenPath;
