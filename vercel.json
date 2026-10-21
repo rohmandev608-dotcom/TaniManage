@@ -1,8 +1,8 @@
 {
   "rewrites": [
     {
-      "source": "/:appPath*",
-      "destination": "/api/index?__app_path=/:appPath*"
+      "source": "/((?!styles\\.css|api/supabase-health).*)",
+      "destination": "/api/index?__app_path=/$1"
     }
   ],
   "functions": {
